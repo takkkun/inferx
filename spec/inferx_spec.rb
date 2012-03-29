@@ -193,10 +193,10 @@ describe Inferx, '#classifications' do
   end
 
   it 'returns an expected value' do
-    @classifier.classifications(%w(apple apple)).should == {
+    @classifier.classifications(%w(apple)).should == {
       :red   =>  0.0,
-      :green => -5.991464547107982,
-      :blue  => -6.802394763324311
+      :green => -2.995732273553991,
+      :blue  => -3.4011973816621555
     }
   end
 end
