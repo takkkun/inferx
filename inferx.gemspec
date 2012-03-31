@@ -4,8 +4,8 @@ require File.expand_path('../lib/inferx/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Takahiro Kondo"]
   gem.email         = ["kondo@atedesign.net"]
-  gem.description   = %q{It is Naive Bayes classifier, and the training data persisted by Redis.}
-  gem.summary       = %q{Naive Bayes classifier, persist by Redis}
+  gem.description   = %q{It is Naive Bayes classifier, and the training data is kept always by Redis.}
+  gem.summary       = %q{Naive Bayes classifier, the training data on Redis}
   gem.homepage      = ""
 
   gem.files         = `git ls-files`.split($\)
