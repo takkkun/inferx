@@ -64,7 +64,7 @@ end
 describe Inferx::Categories, '#get' do
   it 'calls Redis#sismember' do
     redis = redis_stub do |s|
-      s.should_receive(:sismember).with('inferx:categories:red').and_return(true)
+      s.should_receive(:sismember).with('inferx:categories', :red).and_return(true)
     end
 
     categories = described_class.new(redis)

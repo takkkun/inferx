@@ -16,7 +16,7 @@ class Inferx
     end
 
     def get(category_name)
-      raise ArgumentError, "'#{category_name}' is missing" unless @redis.sismember(category_key(category_name))
+      raise ArgumentError, "'#{category_name}' is missing" unless @redis.sismember(@key, category_name)
       Category.new(@redis, category_name, @namespace)
     end
     alias [] get
