@@ -26,18 +26,19 @@ Usage
     inferx = Inferx.new
     inferx.add(:red, :green, :blue)
 
-    inferx.train(:red, {
-      'he'    => 1',
-      'buy'   => 1,
-      'apple' => 2,
-      'its'   => 1,
-      'fresh' => 1
-    })
+    inferx.train(:red, %w(
+      he
+      buy
+      apple
+      its
+      apple
+      fresh
+    ))
 
-    inferx.train(:green, 'grasses' => 2, ...)
-    inferx.train(:blue, 'sea' => 3, ...)
+    inferx.train(:green, %w(grasses ...))
+    inferx.train(:blue, %w(sea ...))
 
-    puts inferx.classify('apple' => 1, ...) # => red
+    puts inferx.classify(%w(apple ...)) # => red
 
 Contributing
 ------------
