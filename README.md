@@ -24,9 +24,9 @@ Usage
     require 'inferx'
 
     inferx = Inferx.new
-    inferx.add(:red, :green, :blue)
+    inferx.categories.add(:red, :green, :blue)
 
-    inferx.train(:red, %w(
+    inferx.categories[:red].train(%w(
       he
       buy
       apple
@@ -35,8 +35,8 @@ Usage
       fresh
     ))
 
-    inferx.train(:green, %w(grasses ...))
-    inferx.train(:blue, %w(sea ...))
+    inferx.categories[:green].train(%w(grasses ...))
+    inferx.categories[:blue].train(%w(sea ...))
 
     puts inferx.classify(%w(apple ...)) # => red
 
