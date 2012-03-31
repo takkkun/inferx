@@ -17,7 +17,7 @@ class Inferx
 
     @categories.inject({}) do |scores, category|
       cached_scores = category.all(:score => 2)
-      size = category.size
+      size = category.size.to_f
 
       # FEATURE: Use pipelined
       scores[category.name] = words.inject(0) do |score, word|
