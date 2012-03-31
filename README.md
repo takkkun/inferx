@@ -1,7 +1,7 @@
 What is inferx
 ==============
 
-It is Naive Bayes classifier, and the training data persisted by Redis.
+It is Naive Bayes classifier, and the training data is kept always by Redis.
 
 Installation
 ------------
