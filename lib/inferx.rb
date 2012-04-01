@@ -12,23 +12,21 @@ class Inferx
 
   attr_reader :categories
 
+  def score(category, words)
+    size = category.size.to_f
+    return -Float::INFINITY unless size > 0
+    cache = category.all(:rank => 500)
+    scores = category.scores(words, cache)
+    scores.inject(0) { |s, score| s + Math.log((score || 0.1) / size) }
+  end
+
   def classifications(words)
     words = words.uniq
-
-    @categories.inject({}) do |scores, category|
-      cached_scores = category.all(:score => 2)
-      size = category.size.to_f
-
-      # FEATURE: Use pipelined
-      scores[category.name] = words.inject(0) do |score, word|
-        score + Math.log((cached_scores[word] || category[word] || 0.1) / size)
-      end
-
-      scores
-    end
+    Hash[@categories.map { |category| [category.name, score(category, words)] }]
   end
 
   def classify(words)
-    classifications(words).max_by { |score| score[1] }[0]
+    category = classifications(words).max_by { |score| score[1] }
+    category ? category[0] : nil
   end
 end
