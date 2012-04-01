@@ -212,7 +212,7 @@ describe Inferx::Category, '#scores' do
     scores.should == [2, 3]
   end
 
-  context 'with a cache' do
+  context 'with words with scores' do
     it 'returns the scores to use the cache' do
       redis = redis_stub do |s|
         s.should_not_receive(:zscore).with('inferx:categories:red', 'strawberry')
@@ -220,7 +220,7 @@ describe Inferx::Category, '#scores' do
       end
 
       category = described_class.new(redis, :red)
-      scores = category.scores(%w(apple strawberry), :cache => {'strawberry' => 3, 'hoge' => 1})
+      scores = category.scores(%w(apple strawberry), 'strawberry' => 3, 'hoge' => 1)
       scores.should == [2, 3]
     end
   end
