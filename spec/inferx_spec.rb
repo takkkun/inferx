@@ -53,6 +53,21 @@ describe Inferx, ' classifying' do
     }
   end
 
+  it 'returns a negative infinity number if the score is zero' do
+    Redis.new.tap do |s|
+      s.stub!(:get).with('inferx:categories:blue:size').and_return(nil)
+      s.should_not_receive(:zscore).with('inferx:categories:blue', 'apple')
+    end
+
+    inferx = described_class.new
+
+    inferx.classifications(%w(apple)).should == {
+      :red   =>  0.0,
+      :green => -2.995732273553991,
+      :blue  => -Float::INFINITY
+    }
+  end
+
   it 'returns a category name got by classification' do
     inferx = described_class.new
     inferx.classify(%w(apple)).should == :red

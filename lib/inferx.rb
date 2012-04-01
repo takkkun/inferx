@@ -16,19 +16,24 @@ class Inferx
     words = words.uniq
 
     @categories.inject({}) do |scores, category|
-      cached_scores = category.all(:score => 2)
       size = category.size.to_f
-
-      # FEATURE: Use pipelined
-      scores[category.name] = words.inject(0) do |score, word|
-        score + Math.log((cached_scores[word] || category[word] || 0.1) / size)
-      end
-
+      scores[category.name] = size > 0 ? score(category, size, words) : -Float::INFINITY
       scores
     end
   end
 
   def classify(words)
     classifications(words).max_by { |score| score[1] }[0]
+  end
+
+  private
+
+  def score(category, size, words)
+    cached_scores = category.all(:score => 2)
+
+    # FEATURE: Use pipelined
+    words.inject(0) do |score, word|
+      score + Math.log((cached_scores[word] || category[word] || 0.1) / size)
+    end
   end
 end
