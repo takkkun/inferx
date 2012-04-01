@@ -1,12 +1,9 @@
 class Inferx
   module Key
     def categories_key
-      @categories_key ||= begin
-                            parts = %w(inferx)
-                            parts << @namespace if @namespace
-                            parts << 'categories'
-                            parts.join(':')
-                          end
+      parts = %w(inferx categories)
+      parts.insert(1, @namespace) if @namespace
+      parts.join(':')
     end
 
     def category_key(category_name)
