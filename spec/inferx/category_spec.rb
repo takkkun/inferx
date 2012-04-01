@@ -190,3 +190,38 @@ describe Inferx::Category, '#size' do
     end
   end
 end
+
+describe Inferx::Category, '#scores' do
+  it 'calls Redis#zscore' do
+    redis = redis_stub do |s|
+      s.should_receive(:zscore).with('inferx:categories:red', 'apple')
+      s.should_receive(:zscore).with('inferx:categories:red', 'strawberry')
+    end
+
+    category = described_class.new(redis, :red)
+    category.scores(%w(apple strawberry))
+  end
+
+  it 'returns the scores' do
+    redis = redis_stub do |s|
+      s.stub!(:pipelined).and_return(%w(2 3))
+    end
+
+    category = described_class.new(redis, :red)
+    scores = category.scores(%w(apple strawberry))
+    scores.should == [2, 3]
+  end
+
+  context 'with a cache' do
+    it 'returns the scores to use the cache' do
+      redis = redis_stub do |s|
+        s.should_not_receive(:zscore).with('inferx:categories:red', 'strawberry')
+        s.stub!(:pipelined).and_return { |&block| block.call; [2] }
+      end
+
+      category = described_class.new(redis, :red)
+      scores = category.scores(%w(apple strawberry), :cache => {'strawberry' => 3, 'hoge' => 1})
+      scores.should == [2, 3]
+    end
+  end
+end

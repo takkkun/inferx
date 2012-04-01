@@ -75,6 +75,27 @@ class Inferx
       (@redis.get(@size_key) || 0).to_i
     end
 
+    def scores(words, options = {})
+      default = options[:default]
+      cache = options[:cache] || {}
+
+      scores = @redis.pipelined do
+        words.each do |word|
+          @redis.zscore(@key, word) unless cache[word]
+        end
+      end
+
+      index = 0
+
+      next_score = lambda do
+        score = scores[index]
+        index += 1
+        score ? score.to_i : default
+      end
+
+      words.map { |word| cache[word] || next_score[] }
+    end
+
     private
 
     def collect(words)
