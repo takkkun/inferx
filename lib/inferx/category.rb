@@ -22,16 +22,16 @@ class Inferx
                          [:zrevrange, [0, rank]]
                        end
 
-      words_with_score = @redis.__send__(command, @key, *range, :withscores => true)
-      size = words_with_score.size
+      words_with_scores = @redis.__send__(command, @key, *range, :withscores => true)
+      size = words_with_scores.size
       index = 1
 
       while index < size
-        words_with_score[index] = words_with_score[index].to_i
+        words_with_scores[index] = words_with_scores[index].to_i
         index += 2
       end
 
-      Hash[*words_with_score]
+      Hash[*words_with_scores]
     end
 
     def get(word)
