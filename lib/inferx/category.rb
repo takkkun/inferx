@@ -4,6 +4,9 @@ class Inferx
   class Category
     include Key
 
+    # @param [Redis] an instance of Redis
+    # @param [Symbol] a category name
+    # @param [String] namespace of keys to be used to Redis
     def initialize(redis, category_name, namespace = nil)
       @redis = redis
       @name = category_name
@@ -14,6 +17,13 @@ class Inferx
 
     attr_reader :name
 
+    # Get words with scores in the category.
+    #
+    # @param [Hash] options
+    #   - `:score => Integer`: lower limit for getting by score
+    #   - `:rank  => Integer`: upper limit for getting by rank
+    #
+    # @return [Hash<String, Integer>] words with scores
     def all(options = {})
       command, range = if score = options[:score]
                          [:zrevrangebyscore, ['+inf', score]]
@@ -22,24 +32,33 @@ class Inferx
                          [:zrevrange, [0, rank]]
                        end
 
-      words_with_score = @redis.__send__(command, @key, *range, :withscores => true)
-      size = words_with_score.size
+      words_with_scores = @redis.__send__(command, @key, *range, :withscores => true)
+      size = words_with_scores.size
       index = 1
 
       while index < size
-        words_with_score[index] = words_with_score[index].to_i
+        words_with_scores[index] = words_with_scores[index].to_i
         index += 2
       end
 
-      Hash[*words_with_score]
+      Hash[*words_with_scores]
     end
 
+    # Get score of a word.
+    #
+    # @param [String] a word
+    # @return [Integer, nil]
+    #   - when the word is member, score of the word
+    #   - when the word is not member, nil
     def get(word)
       score = @redis.zscore(@key, word)
       score ? score.to_i : nil
     end
     alias [] get
 
+    # Enhance the training data giving words.
+    #
+    # @param [Array<String>] words
     def train(words)
       @redis.pipelined do
         increase = collect(words).inject(0) do |count, pair|
@@ -51,6 +70,9 @@ class Inferx
       end
     end
 
+    # Attenuate the training data giving words.
+    #
+    # @param [Array<String>] words
     def untrain(words)
       decrease = 0
 
@@ -71,17 +93,23 @@ class Inferx
       @redis.incrby(@size_key, -decrease) if decrease > 0
     end
 
+    # Get total of scores.
+    #
+    # @return [Integer] total of scores
     def size
       (@redis.get(@size_key) || 0).to_i
     end
 
-    def scores(words, options = {})
-      default = options[:default]
-      cache = options[:cache] || {}
-
+    # Get effectively scores for each word.
+    #
+    # @param [Array<String>] words
+    # @param [Hash<String, Integer>] words with scores prepared in advance for
+    #   reduce access to Redis
+    # @return [Array<Integer>] scores for each word
+    def scores(words, words_with_scores = {})
       scores = @redis.pipelined do
         words.each do |word|
-          @redis.zscore(@key, word) unless cache[word]
+          @redis.zscore(@key, word) unless words_with_scores[word]
         end
       end
 
@@ -90,10 +118,10 @@ class Inferx
       next_score = lambda do
         score = scores[index]
         index += 1
-        score ? score.to_i : default
+        score ? score.to_i : nil
       end
 
-      words.map { |word| cache[word] || next_score[] }
+      words.map { |word| words_with_scores[word] || next_score[] }
     end
 
     private
