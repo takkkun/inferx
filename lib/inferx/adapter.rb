@@ -1,8 +1,8 @@
 class Inferx
   class Adapter
 
-    # @param [Redis] an instance of Redis
-    # @param [String] namespace of keys to be used to Redis
+    # @param [Redis] redis an instance of Redis
+    # @param [String] namespace namespace of keys to be used to Redis
     def initialize(redis, namespace = nil)
       @redis = redis
       @namespace = namespace
@@ -26,7 +26,7 @@ class Inferx
 
     # Make the key for access to scores stored each by word.
     #
-    # @param [Symbol] a category name
+    # @param [Symbol] category_name a category name
     # @return [String] the key
     def make_category_key(category_name)
       "#{categories_key}:#{category_name}"
@@ -34,8 +34,9 @@ class Inferx
 
     # Spawn an instance of any class.
     #
-    # @param [Class] any class, constructor takes the instance of Redis to
+    # @param [Class] klass any class, constructor takes the instance of Redis to
     #   first argument, and takes the namespace to last argument
+    # @param [Array] args any arguments
     # @return [Object] a instance of the class
     def spawn(klass, *args)
       klass.new(@redis, *args, @namespace)
