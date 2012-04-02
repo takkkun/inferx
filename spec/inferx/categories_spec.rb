@@ -8,34 +8,18 @@ describe Inferx::Categories do
 end
 
 describe Inferx::Categories, '#initialize' do
-  it 'sets the instance of Redis to @redis' do
+  it 'calls Inferx::Adapter#initialize' do
     redis = redis_stub
-    categories = described_class.new(redis)
+    categories = described_class.new(redis, 'example')
     categories.instance_eval { @redis }.should == redis
-  end
-
-  it 'sets "inferx:categories" to @key' do
-    categories = described_class.new(redis_stub)
-    categories.instance_eval { @key }.should == 'inferx:categories'
-  end
-
-  context 'with a namespace' do
-    it 'sets the namespace to @namespace' do
-      categories = described_class.new(redis_stub, 'example')
-      categories.instance_eval { @namespace }.should == 'example'
-    end
-
-    it 'sets "inferx:NAMESPACE:categories" to @key' do
-      categories = described_class.new(redis_stub, 'example')
-      categories.instance_eval { @key }.should == 'inferx:example:categories'
-    end
+    categories.instance_eval { @namespace }.should == 'example'
   end
 end
 
 describe Inferx::Categories, '#all' do
-  it 'calls Redis#smembers' do
+  it 'calls Redis#hkeys' do
     redis = redis_stub do |s|
-      s.should_receive(:smembers).with('inferx:categories')
+      s.should_receive(:hkeys).with('inferx:categories')
     end
 
     categories = described_class.new(redis)
@@ -44,7 +28,7 @@ describe Inferx::Categories, '#all' do
 
   it 'returns the all categories as Symbol' do
     redis = redis_stub do |s|
-      s.stub!(:smembers).and_return(%w(red green blue))
+      s.stub!(:hkeys).and_return(%w(red green blue))
     end
 
     categories = described_class.new(redis)
@@ -53,7 +37,7 @@ describe Inferx::Categories, '#all' do
 
   it 'returns an empty array if the key is missing' do
     redis = redis_stub do |s|
-      s.stub!(:smembers).and_return(nil)
+      s.stub!(:hkeys).and_return([])
     end
 
     categories = described_class.new(redis)
@@ -62,9 +46,9 @@ describe Inferx::Categories, '#all' do
 end
 
 describe Inferx::Categories, '#get' do
-  it 'calls Redis#sismember' do
+  it 'calls Redis#hexists' do
     redis = redis_stub do |s|
-      s.should_receive(:sismember).with('inferx:categories', :red).and_return(true)
+      s.should_receive(:hexists).with('inferx:categories', :red).and_return(true)
     end
 
     categories = described_class.new(redis)
@@ -73,7 +57,7 @@ describe Inferx::Categories, '#get' do
 
   it 'calles Inferx::Category.new with the instance of Redis, the category name and the namepsace' do
     redis = redis_stub do |s|
-      s.stub!(:sismember).and_return(true)
+      s.stub!(:hexists).and_return(true)
     end
 
     Inferx::Category.should_receive(:new).with(redis, :red, 'example')
@@ -83,7 +67,7 @@ describe Inferx::Categories, '#get' do
 
   it 'returns an instance of Inferx::Category' do
     redis = redis_stub do |s|
-      s.stub!(:sismember).and_return(true)
+      s.stub!(:hexists).and_return(true)
     end
 
     categories = described_class.new(redis)
@@ -93,7 +77,7 @@ describe Inferx::Categories, '#get' do
   context 'with a missing category' do
     it 'raises ArgumentError' do
       redis = redis_stub do |s|
-        s.stub!(:sismember).and_return(false)
+        s.stub!(:hexists).and_return(false)
       end
 
       categories = described_class.new(redis)
@@ -103,19 +87,19 @@ describe Inferx::Categories, '#get' do
 end
 
 describe Inferx::Categories, '#add' do
-  it 'calls Redis#sadd' do
+  it 'calls Redis#hsetnx' do
     redis = redis_stub do |s|
-      s.should_receive(:sadd).with('inferx:categories', :red)
+      s.should_receive(:hsetnx).with('inferx:categories', :red, 0)
     end
 
     categories = described_class.new(redis)
     categories.add(:red)
   end
 
-  it 'calls Redis#sadd according to the number of the categories' do
+  it 'calls Redis#hsetnx according to the number of the categories' do
     redis = redis_stub do |s|
-      s.should_receive(:sadd).with('inferx:categories', :red)
-      s.should_receive(:sadd).with('inferx:categories', :green)
+      s.should_receive(:hsetnx).with('inferx:categories', :red, 0)
+      s.should_receive(:hsetnx).with('inferx:categories', :green, 0)
     end
 
     categories = described_class.new(redis)
@@ -124,21 +108,21 @@ describe Inferx::Categories, '#add' do
 end
 
 describe Inferx::Categories, '#remove' do
-  it 'calls Redis#srem and Redis#del' do
+  it 'calls Redis#hdel and Redis#del' do
     redis = redis_stub do |s|
-      s.should_receive(:srem).with('inferx:categories', :red)
-      s.should_receive(:del).with(*%w(inferx:categories:red inferx:categories:red:size))
+      s.should_receive(:hdel).with('inferx:categories', :red)
+      s.should_receive(:del).with('inferx:categories:red')
     end
 
     categories = described_class.new(redis)
     categories.remove(:red)
   end
 
-  it 'calls Redis#srem according to the number of the categories' do
+  it 'calls Redis#hdel according to the number of the categories' do
     redis = redis_stub do |s|
-      s.should_receive(:srem).with('inferx:categories', :red)
-      s.should_receive(:srem).with('inferx:categories', :green)
-      s.should_receive(:del).with(*%w(inferx:categories:red inferx:categories:red:size inferx:categories:green inferx:categories:green:size))
+      s.should_receive(:hdel).with('inferx:categories', :red)
+      s.should_receive(:hdel).with('inferx:categories', :green)
+      s.should_receive(:del).with('inferx:categories:red', 'inferx:categories:green')
     end
 
     categories = described_class.new(redis)
@@ -149,7 +133,7 @@ end
 describe Inferx::Categories, '#each' do
   before do
     @redis = redis_stub do |s|
-      s.stub!(:smembers).and_return(%w(red green blue))
+      s.stub!(:hkeys).and_return(%w(red green blue))
     end
   end
 
