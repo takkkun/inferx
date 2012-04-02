@@ -3,22 +3,25 @@ require 'inferx/adapter'
 class Inferx
   class Category < Adapter
 
-    # @param [Redis] an instance of Redis
-    # @param [Symbol] a category name
-    # @param [String] namespace of keys to be used to Redis
+    # @param [Redis] redis an instance of Redis
+    # @param [Symbol] name a category name
+    # @param [String] namespace namespace of keys to be used to Redis
     def initialize(redis, name, namespace = nil)
       super(redis, namespace)
       @name = name
     end
 
+    # Get a category name.
+    #
+    # @attribute [r] name
+    # @return [Symbol] a category name
     attr_reader :name
 
     # Get words with scores in the category.
     #
     # @param [Hash] options
-    #   - `:score => Integer`: lower limit for getting by score
-    #   - `:rank  => Integer`: upper limit for getting by rank
-    #
+    # @option options [Integer] :score lower limit for getting by score
+    # @option options [Integer] :rank upper limit for getting by rank
     # @return [Hash<String, Integer>] words with scores
     def all(options = {})
       words_with_scores = if score = options[:score]
@@ -41,10 +44,9 @@ class Inferx
 
     # Get score of a word.
     #
-    # @param [String] a word
-    # @return [Integer, nil]
-    #   - when the word is member, score of the word
-    #   - when the word is not member, nil
+    # @param [String] word a word
+    # @return [Integer] when the word is member, score of the word
+    # @return [nil] when the word is not member
     def get(word)
       score = zscore(word)
       score ? score.to_i : nil
@@ -53,7 +55,7 @@ class Inferx
 
     # Enhance the training data giving words.
     #
-    # @param [Array<String>] words
+    # @param [Array<String>] words an array of words
     def train(words)
       @redis.pipelined do
         increase = collect(words).inject(0) do |count, pair|
@@ -67,7 +69,7 @@ class Inferx
 
     # Attenuate the training data giving words.
     #
-    # @param [Array<String>] words
+    # @param [Array<String>] words an array of words
     def untrain(words)
       decrease = 0
 
@@ -97,9 +99,9 @@ class Inferx
 
     # Get effectively scores for each word.
     #
-    # @param [Array<String>] words
-    # @param [Hash<String, Integer>] words with scores prepared in advance for
-    #   reduce access to Redis
+    # @param [Array<String>] words a set of words
+    # @param [Hash<String, Integer>] words_with_scores words with scores
+    #   prepared in advance for reduce access to Redis
     # @return [Array<Integer>] scores for each word
     def scores(words, words_with_scores = {})
       scores = @redis.pipelined do

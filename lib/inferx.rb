@@ -5,11 +5,10 @@ require 'inferx/categories'
 
 class Inferx
 
-  # @param [Hash] options
-  #   - `:namespace => String`: namespace of keys to be used to Redis
+  # @param [Hash] options other options are passed to Redis#initialize in
+  #   {https://github.com/redis/redis-rb redis}
   #
-  #   Other options are passed to Redis#initialize in:
-  #     https://github.com/redis/redis-rb
+  # @option options [String] :namespace namespace of keys to be used to Redis
   def initialize(options = {})
     namespace = options.delete(:namespace)
     redis = Redis.new(options)
@@ -20,8 +19,8 @@ class Inferx
 
   # Get a score of a category according to a set of words.
   #
-  # @param [Inferx::Category] a category for scoring
-  # @param [Array<String>] a set of words
+  # @param [Inferx::Category] category a category for scoring
+  # @param [Array<String>] words a set of words
   # @return [Float] a score of the category
   def score(category, words)
     size = category.size.to_f
@@ -33,7 +32,7 @@ class Inferx
 
   # Get a score for each category according to a set of words.
   #
-  # @param [Array<String>] a set of words
+  # @param [Array<String>] words a set of words
   # @return [Hash<Symbol, Float>] scores to key a category
   #
   # @see #score
@@ -42,9 +41,9 @@ class Inferx
     Hash[@categories.map { |category| [category.name, score(category, words)] }]
   end
 
-  # Classify words to any one category
+  # Classify words to any one category.
   #
-  # @param [Array<String>] a set of words
+  # @param [Array<String>] words a set of words
   # @return [Symbol] most high-scoring category name
   #
   # @see #score
