@@ -2,37 +2,16 @@ require 'spec_helper'
 require 'inferx/category'
 
 describe Inferx::Category, '#initialize' do
-  it 'sets the instance of Redis to @redis' do
+  it 'calls Inferx::Adapter#initialize' do
     redis = redis_stub
-    category = described_class.new(redis, :red)
+    category = described_class.new(redis, :red, 'example')
     category.instance_eval { @redis }.should == redis
+    category.instance_eval { @namespace }.should == 'example'
   end
 
-  it 'sets the category name to @name' do
+  it 'sets the category name to the name attribute' do
     category = described_class.new(redis_stub, :red)
-    category.instance_eval { @name }.should == :red
-  end
-
-  it 'sets "inferx:categories:CATEGORY_NAME" to @key' do
-    category = described_class.new(redis_stub, :red)
-    category.instance_eval { @key }.should == 'inferx:categories:red'
-  end
-
-  it 'sets "inferx:categories:CATEGORY_NAME:size" to @size_key' do
-    category = described_class.new(redis_stub, :red)
-    category.instance_eval { @size_key }.should == 'inferx:categories:red:size'
-  end
-
-  context 'with a namespace' do
-    it 'sets "inferx:NAMESPACE:categories:CATEGORY_NAME" to @key' do
-      category = described_class.new(redis_stub, :red, 'example')
-      category.instance_eval { @key }.should == 'inferx:example:categories:red'
-    end
-
-    it 'sets "inferx:NAMESPACE:categories:CATEGORY_NAME:size" to @size_key' do
-      category = described_class.new(redis_stub, :red, 'example')
-      category.instance_eval { @size_key }.should == 'inferx:example:categories:red:size'
-    end
+    category.name.should == :red
   end
 end
 
@@ -55,17 +34,6 @@ describe Inferx::Category, '#all' do
     category.all.should == {'apple' => 2, 'strawberry' => 3}
   end
 
-  context 'with the score option' do
-    it 'calls Redis#zrevrangebyscore' do
-      redis = redis_stub do |s|
-        s.should_receive(:zrevrangebyscore).with('inferx:categories:red', '+inf', 2, :withscores => true).and_return([])
-      end
-
-      category = described_class.new(redis, :red)
-      category.all(:score => 2)
-    end
-  end
-
   context 'with the rank option' do
     it 'calls Redis#zrevrange' do
       redis = redis_stub do |s|
@@ -74,6 +42,17 @@ describe Inferx::Category, '#all' do
 
       category = described_class.new(redis, :red)
       category.all(:rank => 1000)
+    end
+  end
+
+  context 'with the score option' do
+    it 'calls Redis#zrevrangebyscore' do
+      redis = redis_stub do |s|
+        s.should_receive(:zrevrangebyscore).with('inferx:categories:red', '+inf', 2, :withscores => true).and_return([])
+      end
+
+      category = described_class.new(redis, :red)
+      category.all(:score => 2)
     end
   end
 end
@@ -110,11 +89,11 @@ describe Inferx::Category, '#get' do
 end
 
 describe Inferx::Category, '#train' do
-  it 'calls Redis#zincrby and Redis#incrby' do
+  it 'calls Redis#zincrby and Redis#hincrby' do
     redis = redis_stub do |s|
       s.should_receive(:zincrby).with('inferx:categories:red', 2, 'apple')
       s.should_receive(:zincrby).with('inferx:categories:red', 3, 'strawberry')
-      s.should_receive(:incrby).with('inferx:categories:red:size', 5)
+      s.should_receive(:hincrby).with('inferx:categories', :red, 5)
     end
 
     category = described_class.new(redis, :red)
@@ -122,9 +101,9 @@ describe Inferx::Category, '#train' do
   end
 
   context 'with no update' do
-    it 'does not call Redis#incrby' do
+    it 'does not call Redis#hincrby' do
       redis = redis_stub do |s|
-        s.should_not_receive(:incrby)
+        s.should_not_receive(:hincrby)
       end
 
       category = described_class.new(redis, :red)
@@ -134,12 +113,12 @@ describe Inferx::Category, '#train' do
 end
 
 describe Inferx::Category, '#untrain' do
-  it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#incrby' do
+  it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby' do
     redis = redis_stub do |s|
       s.should_receive(:zincrby).with('inferx:categories:red', -2, 'apple')
       s.should_receive(:zincrby).with('inferx:categories:red', -3, 'strawberry')
       s.should_receive(:zremrangebyscore).with('inferx:categories:red', '-inf', 0).and_return(%w(3 -2 1))
-      s.should_receive(:incrby).with('inferx:categories:red:size', -3)
+      s.should_receive(:hincrby).with('inferx:categories', :red, -3)
     end
 
     category = described_class.new(redis, :red)
@@ -147,11 +126,11 @@ describe Inferx::Category, '#untrain' do
   end
 
   context 'with no update' do
-    it 'does not call Redis#incrby' do
+    it 'does not call Redis#hincrby' do
       redis = redis_stub do |s|
         s.stub!(:zincrby)
         s.stub!(:zremrangebyscore).and_return(%w(-2 -3 2))
-        s.should_not_receive(:incrby)
+        s.should_not_receive(:hincrby)
       end
 
       category = described_class.new(redis, :red)
@@ -161,9 +140,9 @@ describe Inferx::Category, '#untrain' do
 end
 
 describe Inferx::Category, '#size' do
-  it 'calls Redis#get' do
+  it 'calls Redis#hget' do
     redis = redis_stub do |s|
-      s.should_receive(:get).with('inferx:categories:red:size')
+      s.should_receive(:hget).with('inferx:categories', :red)
     end
 
     category = described_class.new(redis, :red)
@@ -172,7 +151,7 @@ describe Inferx::Category, '#size' do
 
   it 'returns total of the score of the words as Integer' do
     redis = redis_stub do |s|
-      s.stub!(:get).and_return('1')
+      s.stub!(:hget).and_return('1')
     end
 
     category = described_class.new(redis, :red)
@@ -182,7 +161,7 @@ describe Inferx::Category, '#size' do
   context 'with the missing key' do
     it 'returns 0' do
       redis = redis_stub do |s|
-        s.stub!(:get).and_return(nil)
+        s.stub!(:hget).and_return(nil)
       end
 
       category = described_class.new(redis, :red)

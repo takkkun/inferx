@@ -1,18 +1,14 @@
-require 'inferx/key'
+require 'inferx/adapter'
 
 class Inferx
-  class Category
-    include Key
+  class Category < Adapter
 
     # @param [Redis] an instance of Redis
     # @param [Symbol] a category name
     # @param [String] namespace of keys to be used to Redis
-    def initialize(redis, category_name, namespace = nil)
-      @redis = redis
-      @name = category_name
-      @namespace = namespace
-      @key = category_key(category_name)
-      @size_key = category_size_key(category_name)
+    def initialize(redis, name, namespace = nil)
+      super(redis, namespace)
+      @name = name
     end
 
     attr_reader :name
@@ -25,14 +21,13 @@ class Inferx
     #
     # @return [Hash<String, Integer>] words with scores
     def all(options = {})
-      command, range = if score = options[:score]
-                         [:zrevrangebyscore, ['+inf', score]]
-                       else
-                         rank = options[:rank] || -1
-                         [:zrevrange, [0, rank]]
-                       end
+      words_with_scores = if score = options[:score]
+                            zrevrangebyscore('+inf', score, :withscores => true)
+                          else
+                            rank = options[:rank] || -1
+                            zrevrange(0, rank, :withscores => true)
+                          end
 
-      words_with_scores = @redis.__send__(command, @key, *range, :withscores => true)
       size = words_with_scores.size
       index = 1
 
@@ -51,7 +46,7 @@ class Inferx
     #   - when the word is member, score of the word
     #   - when the word is not member, nil
     def get(word)
-      score = @redis.zscore(@key, word)
+      score = zscore(word)
       score ? score.to_i : nil
     end
     alias [] get
@@ -62,11 +57,11 @@ class Inferx
     def train(words)
       @redis.pipelined do
         increase = collect(words).inject(0) do |count, pair|
-          @redis.zincrby(@key, pair[1], pair[0])
+          zincrby(pair[1], pair[0])
           count + pair[1]
         end
 
-        @redis.incrby(@size_key, increase) if increase > 0
+        hincrby(name, increase) if increase > 0
       end
     end
 
@@ -78,11 +73,11 @@ class Inferx
 
       values = @redis.pipelined do
         decrease = collect(words).inject(0) do |count, pair|
-          @redis.zincrby(@key, -pair[1], pair[0])
+          zincrby(-pair[1], pair[0])
           count + pair[1]
         end
 
-        @redis.zremrangebyscore(@key, '-inf', 0)
+        zremrangebyscore('-inf', 0)
       end
 
       values[0..-2].each do |score|
@@ -90,14 +85,14 @@ class Inferx
         decrease += score if score < 0
       end
 
-      @redis.incrby(@size_key, -decrease) if decrease > 0
+      hincrby(name, -decrease) if decrease > 0
     end
 
     # Get total of scores.
     #
     # @return [Integer] total of scores
     def size
-      (@redis.get(@size_key) || 0).to_i
+      (hget(name) || 0).to_i
     end
 
     # Get effectively scores for each word.
@@ -109,7 +104,7 @@ class Inferx
     def scores(words, words_with_scores = {})
       scores = @redis.pipelined do
         words.each do |word|
-          @redis.zscore(@key, word) unless words_with_scores[word]
+          zscore(word) unless words_with_scores[word]
         end
       end
 
@@ -125,6 +120,13 @@ class Inferx
     end
 
     private
+
+    %w(zrevrange zrevrangebyscore zscore zincrby zremrangebyscore).each do |command|
+      define_method(command) do |*args|
+        @category_key ||= make_category_key(@name)
+        @redis.__send__(command, @category_key, *args)
+      end
+    end
 
     def collect(words)
       words.inject({}) do |hash, word|
