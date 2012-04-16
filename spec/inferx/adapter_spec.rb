@@ -8,10 +8,27 @@ describe Inferx::Adapter, '#initialize' do
     adapter.instance_eval { @redis }.should == redis
   end
 
-  context 'with a namespace' do
-    it 'sets the namespace to @namespace' do
-      adapter = described_class.new(redis_stub, 'example')
+  it 'sets nil to @namespace' do
+    adapter = described_class.new(redis_stub)
+    adapter.instance_eval { @namespace }.should be_nil
+  end
+
+  it 'sets false to @manual' do
+    adapter = described_class.new(redis_stub)
+    adapter.should_not be_manual
+  end
+
+  context 'with namespace option' do
+    it 'sets the value of namespace option to @namespace' do
+      adapter = described_class.new(redis_stub, :namespace => 'example')
       adapter.instance_eval { @namespace }.should == 'example'
+    end
+  end
+
+  context 'with manual option' do
+    it 'sets the value of manual option to @manual' do
+      adapter = described_class.new(redis_stub, :manual => true)
+      adapter.should be_manual
     end
   end
 end
@@ -37,9 +54,9 @@ describe Inferx::Adapter, '#make_categories_key' do
     adapter.categories_key.should == 'inferx:categories'
   end
 
-  context 'with a namespace' do
+  context 'with namespace' do
     it 'returns the key included the namespace' do
-      adapter = described_class.new(redis_stub, 'example')
+      adapter = described_class.new(redis_stub, :namespace => 'example')
       adapter.categories_key.should == 'inferx:example:categories'
     end
   end
@@ -51,9 +68,9 @@ describe Inferx::Adapter, '#make_category_key' do
     adapter.make_category_key(:red).should == 'inferx:categories:red'
   end
 
-  context 'with a namespace' do
+  context 'with namespace' do
     it 'returns the key included the namespace' do
-      adapter = described_class.new(redis_stub, 'example')
+      adapter = described_class.new(redis_stub, :namespace => 'example')
       adapter.make_category_key(:red).should == 'inferx:example:categories:red'
     end
   end
@@ -62,8 +79,8 @@ end
 describe Inferx::Adapter, '#spawn' do
   it 'calls constructor of the class with the instance variables and the arguments' do
     redis = redis_stub
-    adapter = described_class.new(redis, 'example')
-    klass = mock.tap { |m| m.should_receive(:new).with(redis, 'arg1', 'arg2', 'example') }
+    adapter = described_class.new(redis, :namespace => 'example')
+    klass = mock.tap { |m| m.should_receive(:new).with(redis, 'arg1', 'arg2', :namespace => 'example') }
     adapter.spawn(klass, 'arg1', 'arg2')
   end
 

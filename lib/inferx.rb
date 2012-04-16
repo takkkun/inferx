@@ -9,10 +9,9 @@ class Inferx
   #   {https://github.com/redis/redis-rb redis}
   #
   # @option options [String] :namespace namespace of keys to be used to Redis
+  # @option options [Boolean] :manual whether save manually, defaults to false
   def initialize(options = {})
-    namespace = options.delete(:namespace)
-    redis = Redis.new(options)
-    @categories = Categories.new(redis, namespace)
+    @categories = Categories.new(Redis.new(options), options)
   end
 
   attr_reader :categories

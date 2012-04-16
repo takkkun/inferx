@@ -28,6 +28,7 @@ class Inferx
     def add(*category_names)
       @redis.pipelined do
         category_names.each { |category_name| hsetnx(category_name, 0) }
+        @redis.save unless manual?
       end
     end
 
@@ -38,6 +39,7 @@ class Inferx
       @redis.pipelined do
         category_names.each { |category_name| hdel(category_name) }
         @redis.del(*category_names.map(&method(:make_category_key)))
+        @redis.save unless manual?
       end
     end
 

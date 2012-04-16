@@ -4,9 +4,10 @@ require 'inferx/category'
 describe Inferx::Category, '#initialize' do
   it 'calls Inferx::Adapter#initialize' do
     redis = redis_stub
-    category = described_class.new(redis, :red, 'example')
+    category = described_class.new(redis, :red, :namespace => 'example', :manual => true)
     category.instance_eval { @redis }.should == redis
     category.instance_eval { @namespace }.should == 'example'
+    category.should be_manual
   end
 
   it 'sets the category name to the name attribute' do
@@ -94,6 +95,7 @@ describe Inferx::Category, '#train' do
       s.should_receive(:zincrby).with('inferx:categories:red', 2, 'apple')
       s.should_receive(:zincrby).with('inferx:categories:red', 3, 'strawberry')
       s.should_receive(:hincrby).with('inferx:categories', :red, 5)
+      s.should_receive(:save)
     end
 
     category = described_class.new(redis, :red)
@@ -104,10 +106,24 @@ describe Inferx::Category, '#train' do
     it 'does not call Redis#hincrby' do
       redis = redis_stub do |s|
         s.should_not_receive(:hincrby)
+        s.should_not_receive(:save)
       end
 
       category = described_class.new(redis, :red)
       category.train(%w())
+    end
+  end
+
+  context 'with manual save' do
+    it 'does not call Redis#save' do
+      redis = redis_stub do |s|
+        s.stub!(:zincrby)
+        s.stub!(:hincrby)
+        s.should_not_receive(:save)
+      end
+
+      category = described_class.new(redis, :red, :manual => true)
+      category.train(%w(apple strawberry apple strawberry strawberry))
     end
   end
 end
@@ -119,6 +135,7 @@ describe Inferx::Category, '#untrain' do
       s.should_receive(:zincrby).with('inferx:categories:red', -3, 'strawberry')
       s.should_receive(:zremrangebyscore).with('inferx:categories:red', '-inf', 0).and_return(%w(3 -2 1))
       s.should_receive(:hincrby).with('inferx:categories', :red, -3)
+      s.should_receive(:save)
     end
 
     category = described_class.new(redis, :red)
@@ -131,9 +148,24 @@ describe Inferx::Category, '#untrain' do
         s.stub!(:zincrby)
         s.stub!(:zremrangebyscore).and_return(%w(-2 -3 2))
         s.should_not_receive(:hincrby)
+        s.should_not_receive(:save)
       end
 
       category = described_class.new(redis, :red)
+      category.untrain(%w(apple strawberry apple strawberry strawberry))
+    end
+  end
+
+  context 'with manual save' do
+    it 'does not call Redis#save' do
+      redis = redis_stub do |s|
+        s.stub!(:zincrby)
+        s.stub!(:zremrangebyscore).and_return(%w(3 -2 1))
+        s.stub!(:hincrby)
+        s.should_not_receive(:save)
+      end
+
+      category = described_class.new(redis, :red, :manual => true)
       category.untrain(%w(apple strawberry apple strawberry strawberry))
     end
   end

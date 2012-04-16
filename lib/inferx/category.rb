@@ -5,9 +5,11 @@ class Inferx
 
     # @param [Redis] redis an instance of Redis
     # @param [Symbol] name a category name
-    # @param [String] namespace namespace of keys to be used to Redis
-    def initialize(redis, name, namespace = nil)
-      super(redis, namespace)
+    # @param [Hash] options
+    # @option options [String] :namespace namespace of keys to be used to Redis
+    # @option options [Boolean] :manual whether manual save, defaults to false
+    def initialize(redis, name, options = {})
+      super(redis, options)
       @name = name
     end
 
@@ -63,7 +65,10 @@ class Inferx
           count + pair[1]
         end
 
-        hincrby(name, increase) if increase > 0
+        if increase > 0
+          hincrby(name, increase)
+          @redis.save unless manual?
+        end
       end
     end
 
@@ -87,7 +92,10 @@ class Inferx
         decrease += score if score < 0
       end
 
-      hincrby(name, -decrease) if decrease > 0
+      if decrease > 0
+        hincrby(name, -decrease)
+        @redis.save unless manual?
+      end
     end
 
     # Get total of scores.
