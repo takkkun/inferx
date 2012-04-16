@@ -2,10 +2,21 @@ class Inferx
   class Adapter
 
     # @param [Redis] redis an instance of Redis
-    # @param [String] namespace namespace of keys to be used to Redis
-    def initialize(redis, namespace = nil)
+    # @param [Hash] options
+    # @option options [String] :namespace namespace of keys to be used to Redis
+    # @option options [Boolean] :manual whether manual save, defaults to false
+    def initialize(redis, options = {})
       @redis = redis
-      @namespace = namespace
+      @options = options
+      @namespace = options[:namespace]
+      @manual = !!options[:manual]
+    end
+
+    # Determine if manual save.
+    #
+    # @return [Boolean] whether or not manual save
+    def manual?
+      @manual
     end
 
     # Get the key for access to categories.
@@ -39,7 +50,7 @@ class Inferx
     # @param [Array] args any arguments
     # @return [Object] a instance of the class
     def spawn(klass, *args)
-      klass.new(@redis, *args, @namespace)
+      klass.new(@redis, *args, @options)
     end
 
     protected

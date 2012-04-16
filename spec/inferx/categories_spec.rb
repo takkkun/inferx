@@ -10,9 +10,10 @@ end
 describe Inferx::Categories, '#initialize' do
   it 'calls Inferx::Adapter#initialize' do
     redis = redis_stub
-    categories = described_class.new(redis, 'example')
+    categories = described_class.new(redis, :namespace => 'example', :manual => true)
     categories.instance_eval { @redis }.should == redis
     categories.instance_eval { @namespace }.should == 'example'
+    categories.should be_manual
   end
 end
 
@@ -55,13 +56,13 @@ describe Inferx::Categories, '#get' do
     categories.get(:red)
   end
 
-  it 'calles Inferx::Category.new with the instance of Redis, the category name and the namepsace' do
+  it 'calles Inferx::Category.new with the instance of Redis, the category name and the options' do
     redis = redis_stub do |s|
       s.stub!(:hexists).and_return(true)
     end
 
-    Inferx::Category.should_receive(:new).with(redis, :red, 'example')
-    categories = described_class.new(redis, 'example')
+    Inferx::Category.should_receive(:new).with(redis, :red, :namespace => 'example', :manual => true)
+    categories = described_class.new(redis, :namespace => 'example', :manual => true)
     categories.get(:red)
   end
 
@@ -90,6 +91,7 @@ describe Inferx::Categories, '#add' do
   it 'calls Redis#hsetnx' do
     redis = redis_stub do |s|
       s.should_receive(:hsetnx).with('inferx:categories', :red, 0)
+      s.should_receive(:save)
     end
 
     categories = described_class.new(redis)
@@ -100,10 +102,23 @@ describe Inferx::Categories, '#add' do
     redis = redis_stub do |s|
       s.should_receive(:hsetnx).with('inferx:categories', :red, 0)
       s.should_receive(:hsetnx).with('inferx:categories', :green, 0)
+      s.should_receive(:save)
     end
 
     categories = described_class.new(redis)
     categories.add(:red, :green)
+  end
+
+  context 'with manual save' do
+    it 'does not call Redis#save' do
+      redis = redis_stub do |s|
+        s.stub(:hsetnx)
+        s.should_not_receive(:save)
+      end
+
+      categories = described_class.new(redis, :manual => true)
+      categories.add(:red)
+    end
   end
 end
 
@@ -112,6 +127,7 @@ describe Inferx::Categories, '#remove' do
     redis = redis_stub do |s|
       s.should_receive(:hdel).with('inferx:categories', :red)
       s.should_receive(:del).with('inferx:categories:red')
+      s.should_receive(:save)
     end
 
     categories = described_class.new(redis)
@@ -123,10 +139,24 @@ describe Inferx::Categories, '#remove' do
       s.should_receive(:hdel).with('inferx:categories', :red)
       s.should_receive(:hdel).with('inferx:categories', :green)
       s.should_receive(:del).with('inferx:categories:red', 'inferx:categories:green')
+      s.should_receive(:save)
     end
 
     categories = described_class.new(redis)
     categories.remove(:red, :green)
+  end
+
+  context 'with manual save' do
+    it 'does not call Redis#save' do
+      redis = redis_stub do |s|
+        s.stub!(:hdel)
+        s.stub!(:del)
+        s.should_not_receive(:save)
+      end
+
+      categories = described_class.new(redis, :manual => true)
+      categories.remove(:red)
+    end
   end
 end
 

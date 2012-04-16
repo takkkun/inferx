@@ -12,10 +12,10 @@ describe Inferx do
 end
 
 describe Inferx, '#initialize' do
-  it "calls #{described_class}::Categories.new with a connection of Redis and the namespace option" do
+  it "calls #{described_class}::Categories.new with a connection of Redis and the options" do
     redis = redis_stub
-    Inferx::Categories.should_receive(:new).with(redis, 'example')
-    described_class.new(:namespace => 'example')
+    Inferx::Categories.should_receive(:new).with(redis, :namespace => 'example', :manual => true)
+    described_class.new(:namespace => 'example', :manual => true)
   end
 
   it "sets an instance of #{described_class}::Categories to the categories attribute" do
