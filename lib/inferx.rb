@@ -25,7 +25,7 @@ class Inferx
     size = category.size.to_f
     return -Float::INFINITY unless size > 0
     scores = category.scores(words)
-    scores.inject(0) { |s, score| s + Math.log((score || 0.1) / size) }
+    scores.inject(0.0) { |s, score| s + Math.log((score || 0.1) / size) }
   end
 
   # Get a score for each category according to a set of words.

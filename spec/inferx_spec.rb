@@ -65,6 +65,17 @@ describe Inferx, '#score' do
     score.should be_infinite
     score.should < 0
   end
+
+  it 'returns 0.0 if the words are empty' do
+    category = stub.tap do |s|
+      s.stub!(:size).and_return(2)
+      s.stub!(:scores).and_return([])
+    end
+
+    score = @inferx.score(category, [])
+    score.should be_a(Float)
+    score.should be_zero
+  end
 end
 
 describe Inferx, '#classifications' do
