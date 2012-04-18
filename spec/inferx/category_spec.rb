@@ -34,28 +34,6 @@ describe Inferx::Category, '#all' do
     category = described_class.new(redis, :red)
     category.all.should == {'apple' => 2, 'strawberry' => 3}
   end
-
-  context 'with the rank option' do
-    it 'calls Redis#zrevrange' do
-      redis = redis_stub do |s|
-        s.should_receive(:zrevrange).with('inferx:categories:red', 0, 1000, :withscores => true).and_return([])
-      end
-
-      category = described_class.new(redis, :red)
-      category.all(:rank => 1000)
-    end
-  end
-
-  context 'with the score option' do
-    it 'calls Redis#zrevrangebyscore' do
-      redis = redis_stub do |s|
-        s.should_receive(:zrevrangebyscore).with('inferx:categories:red', '+inf', 2, :withscores => true).and_return([])
-      end
-
-      category = described_class.new(redis, :red)
-      category.all(:score => 2)
-    end
-  end
 end
 
 describe Inferx::Category, '#get' do

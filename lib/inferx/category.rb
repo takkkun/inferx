@@ -21,20 +21,11 @@ class Inferx
 
     # Get words with scores in the category.
     #
-    # @param [Hash] options
-    # @option options [Integer] :score lower limit for getting by score
-    # @option options [Integer] :rank upper limit for getting by rank
     # @return [Hash<String, Integer>] words with scores
-    def all(options = {})
-      words_with_scores = if score = options[:score]
-                            zrevrangebyscore('+inf', score, :withscores => true)
-                          else
-                            rank = options[:rank] || -1
-                            zrevrange(0, rank, :withscores => true)
-                          end
-
-      size = words_with_scores.size
+    def all
+      words_with_scores = zrevrange(0, -1, :withscores => true)
       index = 1
+      size = words_with_scores.size
 
       while index < size
         words_with_scores[index] = words_with_scores[index].to_i
@@ -116,7 +107,7 @@ class Inferx
 
     private
 
-    %w(zrevrange zrevrangebyscore zscore zincrby zremrangebyscore).each do |command|
+    %w(zrevrange zscore zincrby zremrangebyscore).each do |command|
       define_method(command) do |*args|
         @category_key ||= make_category_key(@name)
         @redis.__send__(command, @category_key, *args)
