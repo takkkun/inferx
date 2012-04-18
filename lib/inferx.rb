@@ -9,7 +9,7 @@ class Inferx
   #   {https://github.com/redis/redis-rb redis}
   #
   # @option options [String] :namespace namespace of keys to be used to Redis
-  # @option options [Boolean] :manual whether save manually, defaults to false
+  # @option options [Boolean] :manual whether manual save, defaults to false
   def initialize(options = {})
     @categories = Categories.new(Redis.new(options), options)
   end
@@ -24,9 +24,8 @@ class Inferx
   def score(category, words)
     size = category.size.to_f
     return -Float::INFINITY unless size > 0
-    words_with_scores = category.all(:rank => 500)
-    scores = category.scores(words, words_with_scores)
-    scores.inject(0) { |s, score| s + Math.log((score || 0.1) / size) }
+    scores = category.scores(words)
+    scores.inject(0.0) { |s, score| s + Math.log((score || 0.1) / size) }
   end
 
   # Get a score for each category according to a set of words.

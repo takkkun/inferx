@@ -63,7 +63,7 @@ describe Inferx::Adapter, '#make_categories_key' do
 end
 
 describe Inferx::Adapter, '#make_category_key' do
-  it 'returns the key for access to to scores stored each by word' do
+  it 'returns the key for access to scores stored each by word' do
     adapter = described_class.new(redis_stub)
     adapter.make_category_key(:red).should == 'inferx:categories:red'
   end

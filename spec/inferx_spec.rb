@@ -12,7 +12,7 @@ describe Inferx do
 end
 
 describe Inferx, '#initialize' do
-  it "calls #{described_class}::Categories.new with a connection of Redis and the options" do
+  it "calls #{described_class}::Categories.new with an instance of Redis and the options" do
     redis = redis_stub
     Inferx::Categories.should_receive(:new).with(redis, :namespace => 'example', :manual => true)
     described_class.new(:namespace => 'example', :manual => true)
@@ -30,11 +30,10 @@ describe Inferx, '#score' do
     @inferx = described_class.new
   end
 
-  it "calls #{described_class}::Categories#size, #{described_class}::Category#all and #{described_class}::Category#scores" do
+  it "calls #{described_class}::Category#size and #{described_class}::Category#scores" do
     category = mock.tap do |m|
       m.should_receive(:size).and_return(5)
-      m.should_receive(:all).with(:rank => 500).and_return('apple' => 2)
-      m.should_receive(:scores).with(%w(apple), 'apple' => 2).and_return([2])
+      m.should_receive(:scores).with(%w(apple)).and_return([2])
     end
 
     @inferx.score(category, %w(apple))
@@ -51,7 +50,6 @@ describe Inferx, '#score' do
       category = stub.tap do |s|
         s.stub!(:size).and_return(size)
         s.stub!(:scores).and_return(scores)
-        s.stub!(:all)
       end
 
       @inferx.score(category, words).should == expected
@@ -66,6 +64,17 @@ describe Inferx, '#score' do
     score = @inferx.score(category, %w(apple))
     score.should be_infinite
     score.should < 0
+  end
+
+  it 'returns 0.0 if the words are empty' do
+    category = stub.tap do |s|
+      s.stub!(:size).and_return(2)
+      s.stub!(:scores).and_return([])
+    end
+
+    score = @inferx.score(category, [])
+    score.should be_a(Float)
+    score.should be_zero
   end
 end
 

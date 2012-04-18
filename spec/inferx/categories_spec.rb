@@ -47,9 +47,9 @@ describe Inferx::Categories, '#all' do
 end
 
 describe Inferx::Categories, '#get' do
-  it 'calls Redis#hexists' do
+  it 'calls Redis#hget' do
     redis = redis_stub do |s|
-      s.should_receive(:hexists).with('inferx:categories', :red).and_return(true)
+      s.should_receive(:hget).with('inferx:categories', :red).and_return('2')
     end
 
     categories = described_class.new(redis)
@@ -58,17 +58,17 @@ describe Inferx::Categories, '#get' do
 
   it 'calles Inferx::Category.new with the instance of Redis, the category name and the options' do
     redis = redis_stub do |s|
-      s.stub!(:hexists).and_return(true)
+      s.stub!(:hget).and_return('2')
     end
 
-    Inferx::Category.should_receive(:new).with(redis, :red, :namespace => 'example', :manual => true)
+    Inferx::Category.should_receive(:new).with(redis, :red, 2, :namespace => 'example', :manual => true)
     categories = described_class.new(redis, :namespace => 'example', :manual => true)
     categories.get(:red)
   end
 
   it 'returns an instance of Inferx::Category' do
     redis = redis_stub do |s|
-      s.stub!(:hexists).and_return(true)
+      s.stub!(:hget).and_return('2')
     end
 
     categories = described_class.new(redis)
@@ -78,7 +78,7 @@ describe Inferx::Categories, '#get' do
   context 'with a missing category' do
     it 'raises ArgumentError' do
       redis = redis_stub do |s|
-        s.stub!(:hexists).and_return(false)
+        s.stub!(:hget).and_return(nil)
       end
 
       categories = described_class.new(redis)
@@ -163,7 +163,7 @@ end
 describe Inferx::Categories, '#each' do
   before do
     @redis = redis_stub do |s|
-      s.stub!(:hkeys).and_return(%w(red green blue))
+      s.stub!(:hgetall).and_return(%w(red green blue))
     end
   end
 

@@ -5,36 +5,34 @@ class Inferx
 
     # @param [Redis] redis an instance of Redis
     # @param [Symbol] name a category name
+    # @param [Integer] size total of scores
     # @param [Hash] options
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
-    def initialize(redis, name, options = {})
+    def initialize(redis, name, size, options = {})
       super(redis, options)
       @name = name
+      @size = size
     end
 
     # Get a category name.
     #
     # @attribute [r] name
     # @return [Symbol] a category name
-    attr_reader :name
+
+    # Get total of scores.
+    #
+    # @attribute [r] size
+    # @return [Integer] total of scores
+    attr_reader :name, :size
 
     # Get words with scores in the category.
     #
-    # @param [Hash] options
-    # @option options [Integer] :score lower limit for getting by score
-    # @option options [Integer] :rank upper limit for getting by rank
     # @return [Hash<String, Integer>] words with scores
-    def all(options = {})
-      words_with_scores = if score = options[:score]
-                            zrevrangebyscore('+inf', score, :withscores => true)
-                          else
-                            rank = options[:rank] || -1
-                            zrevrange(0, rank, :withscores => true)
-                          end
-
-      size = words_with_scores.size
+    def all
+      words_with_scores = zrevrange(0, -1, :withscores => true)
       index = 1
+      size = words_with_scores.size
 
       while index < size
         words_with_scores[index] = words_with_scores[index].to_i
@@ -68,6 +66,7 @@ class Inferx
         if increase > 0
           hincrby(name, increase)
           @redis.save unless manual?
+          @size += increase
         end
       end
     end
@@ -95,43 +94,22 @@ class Inferx
       if decrease > 0
         hincrby(name, -decrease)
         @redis.save unless manual?
+        @size -= decrease
       end
-    end
-
-    # Get total of scores.
-    #
-    # @return [Integer] total of scores
-    def size
-      (hget(name) || 0).to_i
     end
 
     # Get effectively scores for each word.
     #
-    # @param [Array<String>] words a set of words
-    # @param [Hash<String, Integer>] words_with_scores words with scores
-    #   prepared in advance for reduce access to Redis
+    # @param [Array<String>] words an array of words
     # @return [Array<Integer>] scores for each word
-    def scores(words, words_with_scores = {})
-      scores = @redis.pipelined do
-        words.each do |word|
-          zscore(word) unless words_with_scores[word]
-        end
-      end
-
-      index = 0
-
-      next_score = lambda do
-        score = scores[index]
-        index += 1
-        score ? score.to_i : nil
-      end
-
-      words.map { |word| words_with_scores[word] || next_score[] }
+    def scores(words)
+      scores = @redis.pipelined { words.map(&method(:zscore)) }
+      scores.map { |score| score ? score.to_i : nil }
     end
 
     private
 
-    %w(zrevrange zrevrangebyscore zscore zincrby zremrangebyscore).each do |command|
+    %w(zrevrange zscore zincrby zremrangebyscore).each do |command|
       define_method(command) do |*args|
         @category_key ||= make_category_key(@name)
         @redis.__send__(command, @category_key, *args)
