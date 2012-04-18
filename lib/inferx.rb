@@ -24,8 +24,7 @@ class Inferx
   def score(category, words)
     size = category.size.to_f
     return -Float::INFINITY unless size > 0
-    words_with_scores = category.all(:rank => 500)
-    scores = category.scores(words, words_with_scores)
+    scores = category.scores(words)
     scores.inject(0) { |s, score| s + Math.log((score || 0.1) / size) }
   end
 

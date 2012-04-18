@@ -33,8 +33,7 @@ describe Inferx, '#score' do
   it "calls #{described_class}::Categories#size, #{described_class}::Category#all and #{described_class}::Category#scores" do
     category = mock.tap do |m|
       m.should_receive(:size).and_return(5)
-      m.should_receive(:all).with(:rank => 500).and_return('apple' => 2)
-      m.should_receive(:scores).with(%w(apple), 'apple' => 2).and_return([2])
+      m.should_receive(:scores).with(%w(apple)).and_return([2])
     end
 
     @inferx.score(category, %w(apple))
@@ -51,7 +50,6 @@ describe Inferx, '#score' do
       category = stub.tap do |s|
         s.stub!(:size).and_return(size)
         s.stub!(:scores).and_return(scores)
-        s.stub!(:all)
       end
 
       @inferx.score(category, words).should == expected

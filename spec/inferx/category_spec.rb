@@ -222,17 +222,4 @@ describe Inferx::Category, '#scores' do
     scores = category.scores(%w(apple strawberry))
     scores.should == [2, 3]
   end
-
-  context 'with words with scores' do
-    it 'returns the scores to use the cache' do
-      redis = redis_stub do |s|
-        s.should_not_receive(:zscore).with('inferx:categories:red', 'strawberry')
-        s.stub!(:pipelined).and_return { |&block| block.call; [2] }
-      end
-
-      category = described_class.new(redis, :red)
-      scores = category.scores(%w(apple strawberry), 'strawberry' => 3, 'hoge' => 1)
-      scores.should == [2, 3]
-    end
-  end
 end

@@ -108,25 +108,10 @@ class Inferx
     # Get effectively scores for each word.
     #
     # @param [Array<String>] words a set of words
-    # @param [Hash<String, Integer>] words_with_scores words with scores
-    #   prepared in advance for reduce access to Redis
     # @return [Array<Integer>] scores for each word
-    def scores(words, words_with_scores = {})
-      scores = @redis.pipelined do
-        words.each do |word|
-          zscore(word) unless words_with_scores[word]
-        end
-      end
-
-      index = 0
-
-      next_score = lambda do
-        score = scores[index]
-        index += 1
-        score ? score.to_i : nil
-      end
-
-      words.map { |word| words_with_scores[word] || next_score[] }
+    def scores(words)
+      scores = @redis.pipelined { words.map(&method(:zscore)) }
+      scores.map { |score| score ? score.to_i : nil }
     end
 
     private
