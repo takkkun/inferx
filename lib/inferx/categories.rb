@@ -14,11 +14,12 @@ class Inferx
 
     # Get a category according the name.
     #
-    # @param [Symbol] category_name category name
-    # @return [Inferx::Category] category
+    # @param [Symbol] category_name a category name
+    # @return [Inferx::Category] a category
     def get(category_name)
-      raise ArgumentError, "'#{category_name}' is missing" unless hexists(category_name)
-      spawn(Category, category_name)
+      size = hget(category_name)
+      raise ArgumentError, "'#{category_name}' is missing" unless size
+      spawn(Category, category_name, size.to_i)
     end
     alias [] get
 
@@ -46,9 +47,11 @@ class Inferx
     # Apply process for each category.
     #
     # @yield a block to be called for every category
-    # @yieldparam [Inferx::Category] category category
+    # @yieldparam [Inferx::Category] category a category
     def each
-      all.each { |category_name| yield spawn(Category, category_name) }
+      hgetall.each do |category_name, size|
+        yield spawn(Category, category_name, size.to_i)
+      end
     end
   end
 end

@@ -9,7 +9,7 @@ class Inferx
   #   {https://github.com/redis/redis-rb redis}
   #
   # @option options [String] :namespace namespace of keys to be used to Redis
-  # @option options [Boolean] :manual whether save manually, defaults to false
+  # @option options [Boolean] :manual whether manual save, defaults to false
   def initialize(options = {})
     @categories = Categories.new(Redis.new(options), options)
   end

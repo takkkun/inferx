@@ -5,19 +5,26 @@ class Inferx
 
     # @param [Redis] redis an instance of Redis
     # @param [Symbol] name a category name
+    # @param [Integer] size total of scores
     # @param [Hash] options
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
-    def initialize(redis, name, options = {})
+    def initialize(redis, name, size, options = {})
       super(redis, options)
       @name = name
+      @size = size
     end
 
     # Get a category name.
     #
     # @attribute [r] name
     # @return [Symbol] a category name
-    attr_reader :name
+
+    # Get total of scores.
+    #
+    # @attribute [r] size
+    # @return [Integer] total of scores
+    attr_reader :name, :size
 
     # Get words with scores in the category.
     #
@@ -59,6 +66,7 @@ class Inferx
         if increase > 0
           hincrby(name, increase)
           @redis.save unless manual?
+          @size += increase
         end
       end
     end
@@ -86,19 +94,13 @@ class Inferx
       if decrease > 0
         hincrby(name, -decrease)
         @redis.save unless manual?
+        @size -= decrease
       end
-    end
-
-    # Get total of scores.
-    #
-    # @return [Integer] total of scores
-    def size
-      (hget(name) || 0).to_i
     end
 
     # Get effectively scores for each word.
     #
-    # @param [Array<String>] words a set of words
+    # @param [Array<String>] words an array of words
     # @return [Array<Integer>] scores for each word
     def scores(words)
       scores = @redis.pipelined { words.map(&method(:zscore)) }

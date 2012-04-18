@@ -12,7 +12,7 @@ describe Inferx do
 end
 
 describe Inferx, '#initialize' do
-  it "calls #{described_class}::Categories.new with a connection of Redis and the options" do
+  it "calls #{described_class}::Categories.new with an instance of Redis and the options" do
     redis = redis_stub
     Inferx::Categories.should_receive(:new).with(redis, :namespace => 'example', :manual => true)
     described_class.new(:namespace => 'example', :manual => true)
@@ -30,7 +30,7 @@ describe Inferx, '#score' do
     @inferx = described_class.new
   end
 
-  it "calls #{described_class}::Categories#size, #{described_class}::Category#all and #{described_class}::Category#scores" do
+  it "calls #{described_class}::Category#size and #{described_class}::Category#scores" do
     category = mock.tap do |m|
       m.should_receive(:size).and_return(5)
       m.should_receive(:scores).with(%w(apple)).and_return([2])

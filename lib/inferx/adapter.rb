@@ -46,7 +46,7 @@ class Inferx
     # Spawn an instance of any class.
     #
     # @param [Class] klass any class, constructor takes the instance of Redis to
-    #   first argument, and takes the namespace to last argument
+    #   first argument, and takes the options to last argument
     # @param [Array] args any arguments
     # @return [Object] a instance of the class
     def spawn(klass, *args)
@@ -55,7 +55,7 @@ class Inferx
 
     protected
 
-    %w(hdel hexists hget hincrby hkeys hsetnx).each do |command|
+    %w(hdel hget hgetall hincrby hkeys hsetnx).each do |command|
       define_method(command) do |*args|
         @redis.__send__(command, categories_key, *args)
       end
