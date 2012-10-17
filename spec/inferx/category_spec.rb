@@ -122,6 +122,19 @@ describe Inferx::Category, '#train' do
   end
 end
 
+describe Inferx::Category, '#ready_to_train' do
+  it 'calls #train with the words to train block' do
+    category = described_class.new(redis_stub, :red, 2)
+    category.should_receive(:train).with(%w(word1 word2 word3))
+
+    category.ready_to_train do |train|
+      train[%w(word1)]
+      train[%w(word2)]
+      train[%w(word3)]
+    end
+  end
+end
+
 describe Inferx::Category, '#untrain' do
   it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby' do
     redis = redis_stub do |s|

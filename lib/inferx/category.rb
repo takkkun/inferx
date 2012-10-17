@@ -71,6 +71,16 @@ class Inferx
       end
     end
 
+    # Prepare to enhance the training data. Use for high performance.
+    #
+    # @yield [train] process something
+    # @yieldparam [Proc] train enhance the training data giving words
+    def ready_to_train
+      all_words = []
+      yield lambda { |words| all_words += words }
+      train(all_words)
+    end
+
     # Attenuate the training data giving words.
     #
     # @param [Array<String>] words an array of words
