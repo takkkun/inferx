@@ -75,10 +75,8 @@ class Inferx
     #
     # @yield [train] process something
     # @yieldparam [Proc] train enhance the training data giving words
-    def ready_to_train
-      all_words = []
-      yield lambda { |words| all_words += words }
-      train(all_words)
+    def ready_to_train(&process)
+      train(aggregate(&process))
     end
 
     # Attenuate the training data giving words.
@@ -108,6 +106,14 @@ class Inferx
       end
     end
 
+    # Prepare to attenuate the training data giving words.
+    #
+    # @yield [untrain] process something
+    # @yieldparam [Proc] untrain attenuate the training data giving words
+    def ready_to_untrain(&process)
+      untrain(aggregate(&process))
+    end
+
     # Get effectively scores for each word.
     #
     # @param [Array<String>] words an array of words
@@ -132,6 +138,12 @@ class Inferx
         hash[word] += 1
         hash
       end
+    end
+
+    def aggregate
+      all = []
+      yield lambda { |items| all += items }
+      all
     end
   end
 end
