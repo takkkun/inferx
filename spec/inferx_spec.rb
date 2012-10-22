@@ -141,7 +141,7 @@ describe Inferx, '#classify' do
   end
 
   it 'returns the most high-scoring category' do
-    @inferx.classify(%w(apple)).should == :green
+    @inferx.classify(%w(apple)).should == 'green'
   end
 
   it 'returns nil if the categories is nothing' do
