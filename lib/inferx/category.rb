@@ -4,21 +4,21 @@ class Inferx
   class Category < Adapter
 
     # @param [Redis] redis an instance of Redis
-    # @param [Symbol] name a category name
+    # @param [String] name a category name
     # @param [Integer] size total of scores
     # @param [Hash] options
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
     def initialize(redis, name, size, options = {})
       super(redis, options)
-      @name = name
+      @name = name.to_s
       @size = size
     end
 
     # Get a category name.
     #
     # @attribute [r] name
-    # @return [Symbol] a category name
+    # @return [String] a category name
 
     # Get total of scores.
     #

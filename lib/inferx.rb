@@ -35,7 +35,7 @@ class Inferx
   # Get a score for each category according to a set of words.
   #
   # @param [Array<String>] words a set of words
-  # @return [Hash<Symbol, Float>] scores to key a category
+  # @return [Hash<String, Float>] scores to key a category
   #
   # @see #score
   def classifications(words)
@@ -46,7 +46,7 @@ class Inferx
   # Classify words to any one category.
   #
   # @param [Array<String>] words a set of words
-  # @return [Symbol] most high-scoring category name
+  # @return [String] most high-scoring category name
   #
   # @see #score
   # @see #classifications

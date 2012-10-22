@@ -65,13 +65,13 @@ end
 describe Inferx::Adapter, '#make_category_key' do
   it 'returns the key for access to scores stored each by word' do
     adapter = described_class.new(redis_stub)
-    adapter.make_category_key(:red).should == 'inferx:categories:red'
+    adapter.make_category_key('red').should == 'inferx:categories:red'
   end
 
   context 'with namespace' do
     it 'returns the key included the namespace' do
       adapter = described_class.new(redis_stub, :namespace => 'example')
-      adapter.make_category_key(:red).should == 'inferx:example:categories:red'
+      adapter.make_category_key('red').should == 'inferx:example:categories:red'
     end
   end
 end

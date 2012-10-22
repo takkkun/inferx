@@ -88,7 +88,7 @@ end
 
 describe Inferx, '#classifications' do
   before do
-    categories = [:red, :green, :blue].map do |category_name|
+    categories = %w(red green blue).map do |category_name|
       stub.tap { |s| s.stub!(:name).and_return(category_name) }
     end
 
@@ -118,9 +118,9 @@ describe Inferx, '#classifications' do
 
   it 'returns the scores to key the category name' do
     @inferx.classifications(%w(apple)).should == {
-      :red   => 'score of red',
-      :green => 'score of green',
-      :blue  => 'score of blue'
+      'red'   => 'score of red',
+      'green' => 'score of green',
+      'blue'  => 'score of blue'
     }
   end
 end
@@ -128,13 +128,13 @@ end
 describe Inferx, '#classify' do
   before do
     @inferx = described_class.new.tap do |s|
-      s.stub!(:classifications).and_return(:red => -2, :green => -1, :blue => -3)
+      s.stub!(:classifications).and_return('red' => -2, 'green' => -1, 'blue' => -3)
     end
   end
 
   it "calls #{described_class}#classifications" do
     @inferx.tap do |m|
-      m.should_receive(:classifications).with(%w(apple)).and_return(:red => -2)
+      m.should_receive(:classifications).with(%w(apple)).and_return('red' => -2)
     end
 
     @inferx.classify(%w(apple))
@@ -155,12 +155,12 @@ describe Inferx, '#classify' do
   context 'when construct with :complementary option' do
     before do
       @inferx = described_class.new(:complementary => true).tap do |s|
-        s.stub!(:classifications).and_return(:red => -2, :green => -1, :blue => -3)
+        s.stub!(:classifications).and_return('red' => -2, 'green' => -1, 'blue' => -3)
       end
     end
 
     it 'returns the most lower-scoring category' do
-      @inferx.classify(%w(apple)).should == :blue
+      @inferx.classify(%w(apple)).should == 'blue'
     end
   end
 end
