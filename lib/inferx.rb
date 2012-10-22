@@ -2,9 +2,9 @@ require 'redis'
 
 require 'inferx/version'
 require 'inferx/categories'
+require 'inferx/complementary/categories'
 
 class Inferx
-  autoload :Complementary, 'inferx/complementary'
 
   # @param [Hash] options other options are passed to Redis#initialize in
   #   {https://github.com/redis/redis-rb redis}

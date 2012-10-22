@@ -19,7 +19,7 @@ class Inferx
     def get(category_name)
       size = hget(category_name)
       raise ArgumentError, "'#{category_name}' is missing" unless size
-      spawn(Category, category_name, size.to_i)
+      spawn_category(category_name, size.to_i)
     end
     alias [] get
 
@@ -50,8 +50,12 @@ class Inferx
     # @yieldparam [Inferx::Category] category a category
     def each
       hgetall.each do |category_name, size|
-        yield spawn(Category, category_name, size.to_i)
+        yield spawn_category(category_name, size.to_i)
       end
+    end
+
+    def spawn_category(*args)
+      spawn(Category, *args)
     end
   end
 end

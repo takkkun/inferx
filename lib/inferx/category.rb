@@ -123,7 +123,7 @@ class Inferx
       scores.map { |score| score ? score.to_i : nil }
     end
 
-    private
+    protected
 
     %w(zrevrange zscore zincrby zremrangebyscore).each do |command|
       define_method(command) do |*args|

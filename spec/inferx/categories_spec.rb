@@ -179,3 +179,20 @@ describe Inferx::Categories, '#each' do
     n.should == 3
   end
 end
+
+describe Inferx::Categories, '#spawn_category' do
+  before do
+    @categories = described_class.new(redis_stub).tap do |s|
+      s.stub!(:spawn => 'category')
+    end
+  end
+
+  it 'calls #spawn with Inferx::Category and the arguments' do
+    @categories.should_receive(:spawn).with(Inferx::Category, 'arg1', 'arg2')
+    @categories.spawn_category('arg1', 'arg2')
+  end
+
+  it 'returns the return value from #spawn' do
+    @categories.spawn_category('arg1', 'arg2').should == 'category'
+  end
+end
