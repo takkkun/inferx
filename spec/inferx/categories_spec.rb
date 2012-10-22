@@ -154,7 +154,11 @@ end
 describe Inferx::Categories, '#each' do
   before do
     @redis = redis_stub do |s|
-      s.stub!(:hgetall).and_return(%w(red green blue))
+      s.stub!(:hgetall).and_return(
+        'red'   => 2,
+        'green' => 3,
+        'blue'  => 1
+      )
     end
   end
 
