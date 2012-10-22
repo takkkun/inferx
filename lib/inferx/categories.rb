@@ -54,6 +54,8 @@ class Inferx
       end
     end
 
+    protected
+
     def spawn_category(*args)
       spawn(Category, *args)
     end

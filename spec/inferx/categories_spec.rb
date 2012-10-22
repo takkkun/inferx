@@ -189,10 +189,10 @@ describe Inferx::Categories, '#spawn_category' do
 
   it 'calls #spawn with Inferx::Category and the arguments' do
     @categories.should_receive(:spawn).with(Inferx::Category, 'arg1', 'arg2')
-    @categories.spawn_category('arg1', 'arg2')
+    @categories.__send__(:spawn_category, 'arg1', 'arg2')
   end
 
   it 'returns the return value from #spawn' do
-    @categories.spawn_category('arg1', 'arg2').should == 'category'
+    @categories.__send__(:spawn_category, 'arg1', 'arg2').should == 'category'
   end
 end
