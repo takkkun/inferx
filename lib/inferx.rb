@@ -51,7 +51,8 @@ class Inferx
   # @see #score
   # @see #classifications
   def classify(words)
-    category = classifications(words).max_by { |score| score[1] }
+    method_name = @complementary ? :min_by : :max_by
+    category = classifications(words).__send__(method_name) { |score| score[1] }
     category ? category[0] : nil
   end
 end

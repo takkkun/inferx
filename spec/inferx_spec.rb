@@ -151,4 +151,16 @@ describe Inferx, '#classify' do
 
     @inferx.classify(%w(apple)).should be_nil
   end
+
+  context 'when construct with :complementary option' do
+    before do
+      @inferx = described_class.new(:complementary => true).tap do |s|
+        s.stub!(:classifications).and_return(:red => -2, :green => -1, :blue => -3)
+      end
+    end
+
+    it 'returns the most lower-scoring category' do
+      @inferx.classify(%w(apple)).should == :blue
+    end
+  end
 end
