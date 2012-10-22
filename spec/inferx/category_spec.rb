@@ -104,7 +104,7 @@ describe Inferx::Category, '#train' do
       end
 
       category = described_class.new(redis, 'red', 2)
-      category.train(%w())
+      category.train([])
     end
   end
 
