@@ -4,21 +4,21 @@ class Inferx
   class Category < Adapter
 
     # @param [Redis] redis an instance of Redis
-    # @param [Symbol] name a category name
+    # @param [String] name a category name
     # @param [Integer] size total of scores
     # @param [Hash] options
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
     def initialize(redis, name, size, options = {})
       super(redis, options)
-      @name = name
+      @name = name.to_s
       @size = size
     end
 
     # Get a category name.
     #
     # @attribute [r] name
-    # @return [Symbol] a category name
+    # @return [String] a category name
 
     # Get total of scores.
     #
@@ -57,18 +57,18 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def train(words)
-      @redis.pipelined do
-        increase = collect(words).inject(0) do |count, pair|
-          zincrby(pair[1], pair[0])
-          count + pair[1]
-        end
+      return if words.empty?
 
-        if increase > 0
-          hincrby(name, increase)
-          @redis.save unless manual?
-          @size += increase
-        end
+      increase = words.size
+      words = collect(words)
+
+      @redis.pipelined do
+        words.each { |word, count| zincrby(count, word) }
+        hincrby(name, increase)
+        @redis.save unless manual?
       end
+
+      @size += increase
     end
 
     # Prepare to enhance the training data. Use for high performance.
@@ -83,27 +83,31 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def untrain(words)
-      decrease = 0
+      return if words.empty?
 
-      values = @redis.pipelined do
-        decrease = collect(words).inject(0) do |count, pair|
-          zincrby(-pair[1], pair[0])
-          count + pair[1]
-        end
+      decrease = words.size
+      words = collect(words)
 
+      scores = @redis.pipelined do
+        words.each { |word, count| zincrby(-count, word) }
         zremrangebyscore('-inf', 0)
       end
 
-      values[0..-2].each do |score|
+      length = words.size
+
+      scores[0, length].each do |score|
         score = score.to_i
         decrease += score if score < 0
       end
 
-      if decrease > 0
+      return unless decrease > 0
+
+      @redis.pipelined do
         hincrby(name, -decrease)
         @redis.save unless manual?
-        @size -= decrease
       end
+
+      @size -= decrease
     end
 
     # Prepare to attenuate the training data giving words.
@@ -123,7 +127,7 @@ class Inferx
       scores.map { |score| score ? score.to_i : nil }
     end
 
-    private
+    protected
 
     %w(zrevrange zscore zincrby zremrangebyscore).each do |command|
       define_method(command) do |*args|

@@ -7,25 +7,25 @@ class Inferx
 
     # Get all category names.
     #
-    # @return [Array<Symbol>] category names
+    # @return [Array<String>] category names
     def all
-      (hkeys || []).map(&:to_sym)
+      hkeys || []
     end
 
     # Get a category according the name.
     #
-    # @param [Symbol] category_name a category name
+    # @param [String] category_name a category name
     # @return [Inferx::Category] a category
     def get(category_name)
       size = hget(category_name)
-      raise ArgumentError, "'#{category_name}' is missing" unless size
-      spawn(Category, category_name, size.to_i)
+      raise ArgumentError, "#{category_name.inspect} is missing" unless size
+      spawn_category(category_name, size.to_i)
     end
     alias [] get
 
     # Add categories.
     #
-    # @param [Array<Symbol>] category_names category names
+    # @param [Array<String>] category_names category names
     def add(*category_names)
       @redis.pipelined do
         category_names.each { |category_name| hsetnx(category_name, 0) }
@@ -35,7 +35,7 @@ class Inferx
 
     # Remove categories.
     #
-    # @param [Array<Symbol>] category_names category names
+    # @param [Array<String>] category_names category names
     def remove(*category_names)
       @redis.pipelined do
         category_names.each { |category_name| hdel(category_name) }
@@ -50,8 +50,14 @@ class Inferx
     # @yieldparam [Inferx::Category] category a category
     def each
       hgetall.each do |category_name, size|
-        yield spawn(Category, category_name, size.to_i)
+        yield spawn_category(category_name, size.to_i)
       end
+    end
+
+    protected
+
+    def spawn_category(*args)
+      spawn(Category, *args)
     end
   end
 end

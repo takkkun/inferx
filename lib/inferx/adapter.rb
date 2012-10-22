@@ -37,7 +37,7 @@ class Inferx
 
     # Make the key for access to scores stored each by word.
     #
-    # @param [Symbol] category_name a category name
+    # @param [String] category_name a category name
     # @return [String] the key
     def make_category_key(category_name)
       "#{categories_key}:#{category_name}"
