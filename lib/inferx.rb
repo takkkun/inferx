@@ -4,14 +4,18 @@ require 'inferx/version'
 require 'inferx/categories'
 
 class Inferx
+  autoload :Complementary, 'inferx/complementary'
 
   # @param [Hash] options other options are passed to Redis#initialize in
   #   {https://github.com/redis/redis-rb redis}
   #
+  # @option options [Boolean] :complementary
   # @option options [String] :namespace namespace of keys to be used to Redis
   # @option options [Boolean] :manual whether manual save, defaults to false
   def initialize(options = {})
-    @categories = Categories.new(Redis.new(options), options)
+    @complementary = !!options[:complementary]
+    categories_class = @complementary ? Complementary::Categories : Categories
+    @categories = categories_class.new(Redis.new(options), options)
   end
 
   attr_reader :categories

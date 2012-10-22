@@ -1,0 +1,1 @@
+require 'inferx/complementary/categories'
