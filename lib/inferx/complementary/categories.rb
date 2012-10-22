@@ -7,7 +7,7 @@ class Inferx
       protected
 
       def spawn_category(*args)
-        spawn(Category, self, *args)
+        spawn(Category, *args)
       end
     end
   end

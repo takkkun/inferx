@@ -15,7 +15,7 @@ describe Inferx::Complementary::Categories, '#spawn_category' do
   end
 
   it 'calls #spawn with Inferx::Complementary::Category, the categories and the arguments' do
-    @categories.should_receive(:spawn).with(Inferx::Complementary::Category, @categories, 'arg1', 'arg2')
+    @categories.should_receive(:spawn).with(Inferx::Complementary::Category, 'arg1', 'arg2')
     @categories.__send__(:spawn_category, 'arg1', 'arg2')
   end
 
