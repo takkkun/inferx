@@ -3,6 +3,6 @@ def redis_stub
     s.stub!(:pipelined).and_return { |&block| block.call }
     s.stub!(:save)
     yield s if block_given?
-    Redis.stub!(:new).and_return(s) if defined? Redis
+    Redis.stub!(:new => s) if defined? Redis
   end
 end

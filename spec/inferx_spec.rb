@@ -23,6 +23,14 @@ describe Inferx, '#initialize' do
     inferx = described_class.new
     inferx.categories.should be_an(Inferx::Categories)
   end
+
+  context 'with :complementary option' do
+    it "sets an instance of #{described_class}::Complementary::Categories to the categories attribute" do
+      redis_stub
+      inferx = described_class.new(:complementary => true)
+      inferx.categories.should be_an(Inferx::Complementary::Categories)
+    end
+  end
 end
 
 describe Inferx, '#score' do
@@ -48,8 +56,7 @@ describe Inferx, '#score' do
       words, size, scores = args
 
       category = stub.tap do |s|
-        s.stub!(:size).and_return(size)
-        s.stub!(:scores).and_return(scores)
+        s.stub!(:size => size, :scores => scores)
       end
 
       @inferx.score(category, words).should == expected
@@ -58,7 +65,7 @@ describe Inferx, '#score' do
 
   it 'returns a negative infinity number if the category does not have words' do
     category = stub.tap do |s|
-      s.stub!(:size).and_return(0)
+      s.stub!(:size => 0)
     end
 
     score = @inferx.score(category, %w(apple))
@@ -68,8 +75,7 @@ describe Inferx, '#score' do
 
   it 'returns 0.0 if the words are empty' do
     category = stub.tap do |s|
-      s.stub!(:size).and_return(2)
-      s.stub!(:scores).and_return([])
+      s.stub!(:size => 2, :scores => [])
     end
 
     score = @inferx.score(category, [])
@@ -80,8 +86,8 @@ end
 
 describe Inferx, '#classifications' do
   before do
-    categories = [:red, :green, :blue].map do |category_name|
-      stub.tap { |s| s.stub!(:name).and_return(category_name) }
+    categories = %w(red green blue).map do |category_name|
+      stub.tap { |s| s.stub!(:name => category_name) }
     end
 
     @inferx = described_class.new.tap do |s|
@@ -110,9 +116,9 @@ describe Inferx, '#classifications' do
 
   it 'returns the scores to key the category name' do
     @inferx.classifications(%w(apple)).should == {
-      :red   => 'score of red',
-      :green => 'score of green',
-      :blue  => 'score of blue'
+      'red'   => 'score of red',
+      'green' => 'score of green',
+      'blue'  => 'score of blue'
     }
   end
 end
@@ -120,27 +126,39 @@ end
 describe Inferx, '#classify' do
   before do
     @inferx = described_class.new.tap do |s|
-      s.stub!(:classifications).and_return(:red => -2, :green => -1, :blue => -3)
+      s.stub!(:classifications => {'red' => -2, 'green' => -1, 'blue' => -3})
     end
   end
 
   it "calls #{described_class}#classifications" do
     @inferx.tap do |m|
-      m.should_receive(:classifications).with(%w(apple)).and_return(:red => -2)
+      m.should_receive(:classifications).with(%w(apple)).and_return('red' => -2)
     end
 
     @inferx.classify(%w(apple))
   end
 
   it 'returns the most high-scoring category' do
-    @inferx.classify(%w(apple)).should == :green
+    @inferx.classify(%w(apple)).should == 'green'
   end
 
   it 'returns nil if the categories is nothing' do
     @inferx.tap do |s|
-      s.stub!(:classifications).and_return({})
+      s.stub!(:classifications => {})
     end
 
     @inferx.classify(%w(apple)).should be_nil
+  end
+
+  context 'when construct with :complementary option' do
+    before do
+      @inferx = described_class.new(:complementary => true).tap do |s|
+        s.stub!(:classifications => {'red' => -2, 'green' => -1, 'blue' => -3})
+      end
+    end
+
+    it 'returns the most lower-scoring category' do
+      @inferx.classify(%w(apple)).should == 'blue'
+    end
   end
 end
