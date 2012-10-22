@@ -138,9 +138,14 @@ end
 describe Inferx::Category, '#untrain' do
   it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby' do
     redis = redis_stub do |s|
+      s.stub!(:pipelined).and_return do |&block|
+        block.call
+        %w(3 -2 1)
+      end
+
       s.should_receive(:zincrby).with('inferx:categories:red', -2, 'apple')
       s.should_receive(:zincrby).with('inferx:categories:red', -3, 'strawberry')
-      s.should_receive(:zremrangebyscore).with('inferx:categories:red', '-inf', 0).and_return(%w(3 -2 1))
+      s.should_receive(:zremrangebyscore).with('inferx:categories:red', '-inf', 0)
       s.should_receive(:hincrby).with('inferx:categories', :red, -3)
       s.should_receive(:save)
     end
@@ -151,8 +156,13 @@ describe Inferx::Category, '#untrain' do
 
   it 'decreases the size attribute' do
     redis = redis_stub do |s|
+      s.stub!(:pipelined).and_return do |&block|
+        block.call
+        %w(3 -2 1)
+      end
+
       s.stub!(:zincrby)
-      s.stub!(:zremrangebyscore).and_return(%w(3 -2 1))
+      s.stub!(:zremrangebyscore)
       s.stub!(:hincrby)
     end
 
@@ -162,10 +172,15 @@ describe Inferx::Category, '#untrain' do
   end
 
   context 'with no update' do
-    it 'does not call Redis#hincrby' do
+    it 'does not call Redis#zremrangebyscore and Redis#hincrby' do
       redis = redis_stub do |s|
+        s.stub!(:pipelined).and_return do |&block|
+          block.call
+          %w(-2 -3 2)
+        end
+
         s.stub!(:zincrby)
-        s.stub!(:zremrangebyscore).and_return(%w(-2 -3 2))
+        s.should_not_receive(:zremrangebyscore)
         s.should_not_receive(:hincrby)
         s.should_not_receive(:save)
       end
@@ -178,8 +193,13 @@ describe Inferx::Category, '#untrain' do
   context 'with manual save' do
     it 'does not call Redis#save' do
       redis = redis_stub do |s|
+        s.stub!(:pipelined).and_return do |&block|
+          block.call
+          %w(3 -2 1)
+        end
+
         s.stub!(:zincrby)
-        s.stub!(:zremrangebyscore).and_return(%w(3 -2 1))
+        s.stub!(:zremrangebyscore)
         s.stub!(:hincrby)
         s.should_not_receive(:save)
       end

@@ -57,18 +57,18 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def train(words)
-      @redis.pipelined do
-        increase = collect(words).inject(0) do |count, pair|
-          zincrby(pair[1], pair[0])
-          count + pair[1]
-        end
+      return if words.empty?
 
-        if increase > 0
-          hincrby(name, increase)
-          @redis.save unless manual?
-          @size += increase
-        end
+      increase = words.size
+      words = collect(words)
+
+      @redis.pipelined do
+        words.each { |word, count| zincrby(count, word) }
+        hincrby(name, increase)
+        @redis.save unless manual?
       end
+
+      @size += increase
     end
 
     # Prepare to enhance the training data. Use for high performance.
@@ -83,27 +83,29 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def untrain(words)
-      decrease = 0
+      return if words.empty?
 
-      values = @redis.pipelined do
-        decrease = collect(words).inject(0) do |count, pair|
-          zincrby(-pair[1], pair[0])
-          count + pair[1]
-        end
+      decrease = words.size
+      words = collect(words)
 
-        zremrangebyscore('-inf', 0)
+      scores = @redis.pipelined do
+        words.each { |word, count| zincrby(-count, word) }
       end
 
-      values[0..-2].each do |score|
+      scores.each do |score|
         score = score.to_i
         decrease += score if score < 0
       end
 
-      if decrease > 0
+      return unless decrease > 0
+
+      @redis.pipelined do
+        zremrangebyscore('-inf', 0)
         hincrby(name, -decrease)
         @redis.save unless manual?
-        @size -= decrease
       end
+
+      @size -= decrease
     end
 
     # Prepare to attenuate the training data giving words.
