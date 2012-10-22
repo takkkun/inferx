@@ -90,9 +90,12 @@ class Inferx
 
       scores = @redis.pipelined do
         words.each { |word, count| zincrby(-count, word) }
+        zremrangebyscore('-inf', 0)
       end
 
-      scores.each do |score|
+      length = words.size
+
+      scores[0, length].each do |score|
         score = score.to_i
         decrease += score if score < 0
       end
@@ -100,7 +103,6 @@ class Inferx
       return unless decrease > 0
 
       @redis.pipelined do
-        zremrangebyscore('-inf', 0)
         hincrby(name, -decrease)
         @redis.save unless manual?
       end

@@ -180,7 +180,7 @@ describe Inferx::Category, '#untrain' do
         end
 
         s.stub!(:zincrby)
-        s.should_not_receive(:zremrangebyscore)
+        s.stub!(:zremrangebyscore)
         s.should_not_receive(:hincrby)
         s.should_not_receive(:save)
       end
