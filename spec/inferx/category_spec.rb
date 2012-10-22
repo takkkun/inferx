@@ -236,7 +236,7 @@ describe Inferx::Category, '#scores' do
 
   it 'returns the scores' do
     redis = redis_stub do |s|
-      s.stub!(:pipelined).and_return(%w(2 3))
+      s.stub!(:pipelined => %w(2 3))
     end
 
     category = described_class.new(redis, 'red', 2)

@@ -3,7 +3,7 @@ require 'inferx/complementary/category'
 describe Inferx::Complementary::Category, '#train' do
   it 'calls Redis#zincrby and Redis#hincrby for other categories' do
     redis = redis_stub do |s|
-      s.stub!(:hkeys).and_return(%w(red green blue))
+      s.stub!(:hkeys => %w(red green blue))
       s.should_receive(:zincrby).with('inferx:categories:green', 2, 'apple')
       s.should_receive(:zincrby).with('inferx:categories:green', 3, 'strawberry')
       s.should_receive(:hincrby).with('inferx:categories', 'green', 5)
@@ -32,7 +32,7 @@ describe Inferx::Complementary::Category, '#train' do
   context 'with manual save' do
     it 'does not call Redis#save' do
       redis = redis_stub do |s|
-        s.stub!(:hkeys).and_return(%w(red green blue))
+        s.stub!(:hkeys => %w(red green blue))
         s.stub!(:zincrby)
         s.stub!(:hincrby)
         s.should_not_receive(:save)
@@ -47,7 +47,7 @@ end
 describe Inferx::Complementary::Category, '#untrain' do
   it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby for other categories' do
     redis = redis_stub do |s|
-      s.stub!(:hkeys).and_return(%w(red green blue))
+      s.stub!(:hkeys => %w(red green blue))
 
       s.stub!(:pipelined).and_return do |&block|
         block.call
@@ -72,7 +72,7 @@ describe Inferx::Complementary::Category, '#untrain' do
   context 'with no update' do
     it 'does not call Redis#zremrangebyscore and Redis#hincrby' do
       redis = redis_stub do |s|
-        s.stub!(:hkeys).and_return(%w(red green blue))
+        s.stub!(:hkeys => %w(red green blue))
 
         s.stub!(:pipelined).and_return do |&block|
           block.call
@@ -93,7 +93,7 @@ describe Inferx::Complementary::Category, '#untrain' do
   context 'with manual save' do
     it 'does not call Redis#save' do
       redis = redis_stub do |s|
-        s.stub!(:hkeys).and_return(%w(red green blue))
+        s.stub!(:hkeys => %w(red green blue))
 
         s.stub!(:pipelined).and_return do |&block|
           block.call

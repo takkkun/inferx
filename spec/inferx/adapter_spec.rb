@@ -86,7 +86,7 @@ describe Inferx::Adapter, '#spawn' do
 
   it 'returns an instance of the class' do
     adapter = described_class.new(redis_stub)
-    klass = stub.tap { |s| s.stub!(:new).and_return('klass') }
+    klass = stub.tap { |s| s.stub!(:new => 'klass') }
     adapter.spawn(klass).should == 'klass'
   end
 end

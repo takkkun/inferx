@@ -29,7 +29,7 @@ describe Inferx::Categories, '#all' do
 
   it 'returns an empty array if the key is missing' do
     redis = redis_stub do |s|
-      s.stub!(:hkeys).and_return([])
+      s.stub!(:hkeys => [])
     end
 
     categories = described_class.new(redis)
@@ -49,7 +49,7 @@ describe Inferx::Categories, '#get' do
 
   it 'calles Inferx::Category.new with the instance of Redis, the category name and the options' do
     redis = redis_stub do |s|
-      s.stub!(:hget).and_return('2')
+      s.stub!(:hget => '2')
     end
 
     Inferx::Category.should_receive(:new).with(redis, 'red', 2, :namespace => 'example', :manual => true)
@@ -59,7 +59,7 @@ describe Inferx::Categories, '#get' do
 
   it 'returns an instance of Inferx::Category' do
     redis = redis_stub do |s|
-      s.stub!(:hget).and_return('2')
+      s.stub!(:hget => '2')
     end
 
     categories = described_class.new(redis)
@@ -69,7 +69,7 @@ describe Inferx::Categories, '#get' do
   context 'with a missing category' do
     it 'raises ArgumentError' do
       redis = redis_stub do |s|
-        s.stub!(:hget).and_return(nil)
+        s.stub!(:hget => nil)
       end
 
       categories = described_class.new(redis)
@@ -154,11 +154,11 @@ end
 describe Inferx::Categories, '#each' do
   before do
     @redis = redis_stub do |s|
-      s.stub!(:hgetall).and_return(
+      s.stub!(:hgetall => {
         'red'   => 2,
         'green' => 3,
         'blue'  => 1
-      )
+      })
     end
   end
 
