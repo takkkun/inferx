@@ -3,6 +3,14 @@ require 'inferx/adapter'
 class Inferx
   class Category < Adapter
 
+    def self.ready_for(method_name)
+      define_method("ready_to_#{method_name}") do |&block|
+        all = []
+        block[lambda { |items| all += items }]
+        __send__(method_name, all)
+      end
+    end
+
     # @param [Redis] redis an instance of Redis
     # @param [String] name a category name
     # @param [Integer] size total of scores
@@ -75,9 +83,7 @@ class Inferx
     #
     # @yield [train] process something
     # @yieldparam [Proc] train enhance the training data giving words
-    def ready_to_train(&process)
-      train(aggregate(&process))
-    end
+    ready_for :train
 
     # Attenuate the training data giving words.
     #
@@ -114,9 +120,7 @@ class Inferx
     #
     # @yield [untrain] process something
     # @yieldparam [Proc] untrain attenuate the training data giving words
-    def ready_to_untrain(&process)
-      untrain(aggregate(&process))
-    end
+    ready_for :untrain
 
     # Get effectively scores for each word.
     #
@@ -142,12 +146,6 @@ class Inferx
         hash[word] += 1
         hash
       end
-    end
-
-    def aggregate
-      all = []
-      yield lambda { |items| all += items }
-      all
     end
   end
 end

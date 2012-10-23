@@ -4,6 +4,32 @@ class Inferx
   module Complementary
     class Category < Inferx::Category
 
+      # Inject the words to the training data of the category.
+      #
+      # @param [Array<String>] words an array of words
+      alias inject train
+
+      # Eject the words from the training data of the category.
+      #
+      # @param [Array<String>] words an array of words
+      alias eject untrain
+
+      # Prepare to inject the words to the training data of the category. Use
+      # for high performance.
+      #
+      # @yield [train] process something
+      # @yieldparam [Proc] inject inject the words to the training data of the
+      #   category
+      ready_for :inject
+
+      # Prepare to eject the words from the training data of the category. Use
+      # for high performance.
+      #
+      # @yield [train] process something
+      # @yieldparam [Proc] eject eject the words from the training data of the
+      #   category
+      ready_for :eject
+
       # Enhance the training data of other categories giving words.
       #
       # @param [Array<String>] words an array of words
