@@ -151,6 +151,35 @@ describe Inferx::Categories, '#remove' do
   end
 end
 
+describe Inferx::Categories, '#exists?' do
+  it 'calls Redis#hexists' do
+    redis = redis_stub.tap do |s|
+      s.should_receive(:hexists).with('inferx:categories', 'red')
+    end
+
+    categories = described_class.new(redis)
+    categories.exists?('red')
+  end
+
+  it 'returns true if the category is defined' do
+    redis = redis_stub.tap do |s|
+      s.stub!(:hexists => true)
+    end
+
+    categories = described_class.new(redis)
+    categories.should be_exists('red')
+  end
+
+  it 'returns false if the category is not defined' do
+    redis = redis_stub.tap do |s|
+      s.stub!(:hexists => false)
+    end
+
+    categories = described_class.new(redis)
+    categories.should_not be_exists('red')
+  end
+end
+
 describe Inferx::Categories, '#each' do
   before do
     @redis = redis_stub do |s|

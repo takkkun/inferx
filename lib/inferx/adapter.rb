@@ -55,7 +55,7 @@ class Inferx
 
     protected
 
-    %w(hdel hget hgetall hincrby hkeys hsetnx).each do |command|
+    %w(hdel hexists hget hgetall hincrby hkeys hsetnx).each do |command|
       define_method(command) do |*args|
         @redis.__send__(command, categories_key, *args)
       end

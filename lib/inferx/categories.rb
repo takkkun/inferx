@@ -44,6 +44,14 @@ class Inferx
       end
     end
 
+    # Determine if the category is defined.
+    #
+    # @param [String] category_name a category name
+    # @return whether the category is defined
+    def exists?(category_name)
+      hexists(category_name)
+    end
+
     # Apply process for each category.
     #
     # @yield a block to be called for every category
