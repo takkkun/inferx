@@ -1,5 +1,31 @@
 require 'inferx/complementary/category'
 
+describe Inferx::Complementary::Category, '#ready_to_inject' do
+  it 'calls #inject with the words to inject block' do
+    category = described_class.new(redis_stub, 'red', 2)
+    category.should_receive(:inject).with(%w(word1 word2 word3))
+
+    category.ready_to_inject do |inject|
+      inject[%w(word1)]
+      inject[%w(word2)]
+      inject[%w(word3)]
+    end
+  end
+end
+
+describe Inferx::Complementary::Category, '#ready_to_eject' do
+  it 'calls #eject with the words to eject block' do
+    category = described_class.new(redis_stub, 'red', 2)
+    category.should_receive(:eject).with(%w(word1 word2 word3))
+
+    category.ready_to_eject do |eject|
+      eject[%w(word1)]
+      eject[%w(word2)]
+      eject[%w(word3)]
+    end
+  end
+end
+
 describe Inferx::Complementary::Category, '#train' do
   it 'calls Redis#zincrby and Redis#hincrby for other categories' do
     redis = redis_stub do |s|
