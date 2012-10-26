@@ -112,8 +112,8 @@ describe Inferx::Categories, '#get' do
   end
 
   it 'calles Inferx::Category.new with the instance of Redis, the category name and the options' do
-    Inferx::Category.should_receive(:new).with(@redis, 'red', 2, :namespace => 'example', :manual => true)
     categories = described_class.new(@redis, :namespace => 'example', :manual => true)
+    Inferx::Category.should_receive(:new).with(@redis, 'red', 2, categories, :namespace => 'example', :manual => true)
     categories.get('red')
   end
 

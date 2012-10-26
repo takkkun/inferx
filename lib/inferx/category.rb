@@ -14,13 +14,15 @@ class Inferx
     # @param [Redis] redis an instance of Redis
     # @param [String] name a category name
     # @param [Integer] size total of scores
+    # @param [Inferx::Categories] categories the categories
     # @param [Hash] options
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
-    def initialize(redis, name, size, options = {})
+    def initialize(redis, name, size, categories, options = {})
       super(redis, options)
       @name = name.to_s
       @size = size
+      @categories = categories
     end
 
     # Get a category name.

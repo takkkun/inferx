@@ -1,8 +1,9 @@
+require 'spec_helper'
 require 'inferx/category/complementary'
 
 describe Inferx::Category::Complementary, '#ready_to_inject' do
   it 'calls #inject with the words to inject block' do
-    category = described_class.new(redis_stub, 'red', 2)
+    category = described_class.new(redis_stub, 'red', 2, categories_stub)
     category.should_receive(:inject).with(%w(word1 word2 word3))
 
     category.ready_to_inject do |inject|
@@ -15,7 +16,7 @@ end
 
 describe Inferx::Category::Complementary, '#ready_to_eject' do
   it 'calls #eject with the words to eject block' do
-    category = described_class.new(redis_stub, 'red', 2)
+    category = described_class.new(redis_stub, 'red', 2, categories_stub)
     category.should_receive(:eject).with(%w(word1 word2 word3))
 
     category.ready_to_eject do |eject|
@@ -39,7 +40,7 @@ describe Inferx::Category::Complementary, '#train' do
       s.should_receive(:save)
     end
 
-    category = described_class.new(redis, 'red', 2)
+    category = described_class.new(redis, 'red', 2, categories_stub)
     category.train(%w(apple strawberry apple strawberry strawberry))
   end
 
@@ -50,7 +51,7 @@ describe Inferx::Category::Complementary, '#train' do
         s.should_not_receive(:save)
       end
 
-      category = described_class.new(redis, 'red', 2)
+      category = described_class.new(redis, 'red', 2, categories_stub)
       category.train([])
     end
   end
@@ -64,7 +65,7 @@ describe Inferx::Category::Complementary, '#train' do
         s.should_not_receive(:save)
       end
 
-      category = described_class.new(redis, 'red', 2, :manual => true)
+      category = described_class.new(redis, 'red', 2, categories_stub, :manual => true)
       category.train(%w(apple strawberry apple strawberry strawberry))
     end
   end
@@ -91,7 +92,7 @@ describe Inferx::Category::Complementary, '#untrain' do
       s.should_receive(:save)
     end
 
-    category = described_class.new(redis, 'red', 2)
+    category = described_class.new(redis, 'red', 2, categories_stub)
     category.untrain(%w(apple strawberry apple strawberry strawberry))
   end
 
@@ -111,7 +112,7 @@ describe Inferx::Category::Complementary, '#untrain' do
         s.should_not_receive(:save)
       end
 
-      category = described_class.new(redis, 'red', 2)
+      category = described_class.new(redis, 'red', 2, categories_stub)
       category.untrain([])
     end
   end
@@ -132,7 +133,7 @@ describe Inferx::Category::Complementary, '#untrain' do
         s.should_not_receive(:save)
       end
 
-      category = described_class.new(redis, 'red', 2, :manual => true)
+      category = described_class.new(redis, 'red', 2, categories_stub, :manual => true)
       category.untrain(%w(apple strawberry apple strawberry strawberry))
     end
   end
