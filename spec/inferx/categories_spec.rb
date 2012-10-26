@@ -17,63 +17,124 @@ describe Inferx::Categories, '#initialize' do
   end
 end
 
-describe Inferx::Categories, '#all' do
-  it 'calls Redis#hkeys' do
+describe Inferx::Categories, '#filter' do
+  before do
     redis = redis_stub do |s|
-      s.should_receive(:hkeys).with('inferx:categories')
+      s.stub!(:hkeys => %w(red green blue))
     end
 
-    categories = described_class.new(redis)
-    categories.all
+    @categories = described_class.new(redis)
+  end
+
+  it "returns an instance of #{described_class}" do
+    categories = @categories.filter('red', 'green')
+    categories.should be_an(described_class)
+  end
+
+  it 'returns an instance that is different from their own' do
+    categories = @categories.filter('red', 'green')
+    categories.object_id.should_not == @categories.object_id
+  end
+
+  it 'returns categories filtered by the category names' do
+    categories = @categories.filter('red', 'green')
+    categories.all.should == %w(red green)
+  end
+end
+
+describe Inferx::Categories, '#except' do
+  before do
+    redis = redis_stub do |s|
+      s.stub!(:hkeys => %w(red green blue))
+    end
+
+    @categories = described_class.new(redis)
+  end
+
+  it "returns an instance of #{described_class}" do
+    categories = @categories.except('red')
+    categories.should be_an(described_class)
+  end
+
+  it 'returns an instance that is different from their own' do
+    categories = @categories.except('red')
+    categories.object_id.should_not == @categories.object_id
+  end
+
+  it 'returns categories filtered by the category names' do
+    categories = @categories.except('red')
+    categories.all.should == %w(green blue)
+  end
+end
+
+describe Inferx::Categories, '#all' do
+  before do
+    @redis = redis_stub do |s|
+      s.stub!(:hkeys => %w(red green blue))
+    end
+
+    @categories = described_class.new(@redis)
+  end
+
+  it 'calls Redis#hkeys' do
+    @redis.should_receive(:hkeys).with('inferx:categories')
+    @categories.all
+  end
+
+  it 'returns an instance of Array' do
+    @categories.all.should be_an(Array)
   end
 
   it 'returns an empty array if the key is missing' do
-    redis = redis_stub do |s|
-      s.stub!(:hkeys => [])
-    end
+    @redis.stub!(:hkeys => nil)
+    @categories.all.should be_empty
+  end
 
-    categories = described_class.new(redis)
-    categories.all.should be_empty
+  context 'when filtered' do
+    it 'returns filtered category names' do
+      categories = @categories.filter('red', 'green').except('red')
+      categories.all.should == %w(green)
+    end
   end
 end
 
 describe Inferx::Categories, '#get' do
-  it 'calls Redis#hget' do
-    redis = redis_stub do |s|
-      s.should_receive(:hget).with('inferx:categories', 'red').and_return('2')
+  before do
+    @redis = redis_stub do |s|
+      s.stub!(:hget => '2', :hkeys => %w(red green blue))
     end
+  end
 
-    categories = described_class.new(redis)
+  it 'calls Redis#hget' do
+    @redis.should_receive(:hget).with('inferx:categories', 'red').and_return('2')
+    categories = described_class.new(@redis)
     categories.get('red')
   end
 
   it 'calles Inferx::Category.new with the instance of Redis, the category name and the options' do
-    redis = redis_stub do |s|
-      s.stub!(:hget => '2')
-    end
-
-    Inferx::Category.should_receive(:new).with(redis, 'red', 2, :namespace => 'example', :manual => true)
-    categories = described_class.new(redis, :namespace => 'example', :manual => true)
+    Inferx::Category.should_receive(:new).with(@redis, 'red', 2, :namespace => 'example', :manual => true)
+    categories = described_class.new(@redis, :namespace => 'example', :manual => true)
     categories.get('red')
   end
 
   it 'returns an instance of Inferx::Category' do
-    redis = redis_stub do |s|
-      s.stub!(:hget => '2')
-    end
-
-    categories = described_class.new(redis)
+    categories = described_class.new(@redis)
     categories.get('red').should be_an(Inferx::Category)
   end
 
   context 'with a missing category' do
     it 'raises ArgumentError' do
-      redis = redis_stub do |s|
-        s.stub!(:hget => nil)
-      end
-
-      categories = described_class.new(redis)
+      @redis.stub!(:hget => nil)
+      categories = described_class.new(@redis)
       lambda { categories.get('red') }.should raise_error(ArgumentError, /"red" is missing/)
+    end
+  end
+
+  context 'when filtered' do
+    it 'raises ArgumentError if the category is not defined in filtered categories' do
+      categories = described_class.new(@redis)
+      categories = categories.filter('red', 'green').except('red')
+      lambda { categories.get('red') }.should raise_error(ArgumentError, '"red" does not exist in filtered categories')
     end
   end
 end
@@ -152,38 +213,39 @@ describe Inferx::Categories, '#remove' do
 end
 
 describe Inferx::Categories, '#exists?' do
-  it 'calls Redis#hexists' do
+  before do
     redis = redis_stub.tap do |s|
-      s.should_receive(:hexists).with('inferx:categories', 'red')
+      s.stub!(:hkeys => %w(red green blue))
     end
 
-    categories = described_class.new(redis)
-    categories.exists?('red')
+    @categories = described_class.new(redis)
   end
 
   it 'returns true if the category is defined' do
-    redis = redis_stub.tap do |s|
-      s.stub!(:hexists => true)
-    end
-
-    categories = described_class.new(redis)
-    categories.should be_exists('red')
+    @categories.should be_exists('red')
   end
 
   it 'returns false if the category is not defined' do
-    redis = redis_stub.tap do |s|
-      s.stub!(:hexists => false)
+    @categories.should_not be_exists('cyan')
+  end
+
+  context 'when filtered' do
+    it 'returns true if the category is defined in filtered categories' do
+      categories = @categories.filter('red', 'green').except('red')
+      categories.should be_exists('green')
     end
 
-    categories = described_class.new(redis)
-    categories.should_not be_exists('red')
+    it 'returns false if the category is not defined in filtered categories' do
+      categories = @categories.filter('red', 'green').except('red')
+      categories.should_not be_exists('red')
+    end
   end
 end
 
 describe Inferx::Categories, '#each' do
   before do
     @redis = redis_stub do |s|
-      s.stub!(:hgetall => {
+      s.stub!(:hkeys => %w(red green blue), :hgetall => {
         'red'   => 2,
         'green' => 3,
         'blue'  => 1
@@ -201,6 +263,16 @@ describe Inferx::Categories, '#each' do
     categories = described_class.new(@redis)
     categories.each { |category| n += 1 }
     n.should == 3
+  end
+
+  context 'when filtered' do
+    it 'passes an instance of Inferx::Category in filtered categories to the block' do
+      categories = described_class.new(@redis)
+      categories = categories.filter('red', 'green').except('red')
+      category_names = []
+      categories.each { |category| category_names << category.name }
+      category_names.should == %w(green)
+    end
   end
 end
 
