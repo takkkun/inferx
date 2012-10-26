@@ -41,15 +41,21 @@ class Inferx
     # @return [Hash<String, Integer>] words with scores
     def all
       words_with_scores = zrevrange(0, -1, :withscores => true)
-      index = 1
-      size = words_with_scores.size
 
-      while index < size
-        words_with_scores[index] = words_with_scores[index].to_i
-        index += 2
+      if !words_with_scores.empty? and words_with_scores.first.is_a?(Array)
+        words_with_scores.each { |pair| pair[1] = pair[1].to_i }
+        Hash[words_with_scores]
+      else
+        index = 1
+        size = words_with_scores.size
+
+        while index < size
+          words_with_scores[index] = words_with_scores[index].to_i
+          index += 2
+        end
+
+        Hash[*words_with_scores]
       end
-
-      Hash[*words_with_scores]
     end
 
     # Get score of a word.

@@ -33,11 +33,22 @@ describe Inferx::Category, '#all' do
 
   it 'returns the words with the score' do
     redis = redis_stub do |s|
-      s.stub!(:zrevrange).with('inferx:categories:red', 0, -1, :withscores => true).and_return(%w(apple 2 strawberry 3))
+      s.stub!(:zrevrange).with('inferx:categories:red', 0, -1, :withscores => true).and_return([['apple', 2.0], ['strawberry', 3.0]])
     end
 
     category = described_class.new(redis, 'red', 2, categories_stub)
     category.all.should == {'apple' => 2, 'strawberry' => 3}
+  end
+
+  context 'when return old format' do
+    it 'returns the words with the score' do
+      redis = redis_stub do |s|
+        s.stub!(:zrevrange).with('inferx:categories:red', 0, -1, :withscores => true).and_return(%w(apple 2 strawberry 3))
+      end
+
+      category = described_class.new(redis, 'red', 2, categories_stub)
+      category.all.should == {'apple' => 2, 'strawberry' => 3}
+    end
   end
 end
 
