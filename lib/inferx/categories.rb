@@ -15,7 +15,7 @@ class Inferx
     # @option options [Boolean] :manual whether manual save, defaults to false
     def initialize(redis, options = {})
       super
-      @filter = Set.new
+      @filter = nil
       @except = Set.new
       @category_class = options[:complementary] ? Category::Complementary : Category
     end
@@ -25,7 +25,11 @@ class Inferx
     # @param [Array<String>] category_names category names
     # @return [Inferx::Categories] categories filtered by the category names
     def filter(*category_names)
-      append(:@filter, category_names)
+      category_names = category_names.map(&:to_s)
+
+      filtered do
+        @filter = @filter ? @filter & category_names : Set.new(category_names)
+      end
     end
 
     # Filter by excepting categories.
@@ -33,7 +37,11 @@ class Inferx
     # @param [Array<String>] category_names category names
     # @return [Inferx::Categories] categories filterd by the category names
     def except(*category_names)
-      append(:@except, category_names)
+      category_names = category_names.map(&:to_s)
+
+      filtered do
+        @except.merge(category_names)
+      end
     end
 
     # Get all category names.
@@ -50,7 +58,7 @@ class Inferx
     def get(category_name)
       size = hget(category_name)
       raise ArgumentError, "#{category_name.inspect} is missing" unless size
-      raise ArgumentError, "#{category_name.inspect} does not exist in filtered categories" unless all_in_visible.include?(category_name)
+      raise ArgumentError, "#{category_name.inspect} does not exist in filtered categories" unless all_in_visible.include?(category_name.to_s)
       spawn(@category_class, category_name, size.to_i, self)
     end
     alias [] get
@@ -99,18 +107,13 @@ class Inferx
 
     private
 
-    def append(instance_variable_name, category_names)
-      dup.tap do |categories|
-        categories.instance_eval do
-          set = instance_variable_get(instance_variable_name)
-          set.merge(category_names.map(&:to_s))
-        end
-      end
+    def filtered(&block)
+      dup.tap { |filtered| filtered.instance_eval(&block) }
     end
 
     def all_in_visible
       all = Set.new(hkeys || [])
-      all &= @filter unless @filter.empty?
+      all &= @filter if @filter
       all - @except
     end
   end

@@ -40,6 +40,13 @@ describe Inferx::Categories, '#filter' do
     categories = @categories.filter('red', 'green')
     categories.all.should == %w(red green)
   end
+
+  context 'when calling many times' do
+    it 'returns categories filtered by the collective category names' do
+      categories = @categories.filter('red', 'green').filter('green')
+      categories.all.should == %w(green)
+    end
+  end
 end
 
 describe Inferx::Categories, '#except' do
@@ -64,6 +71,13 @@ describe Inferx::Categories, '#except' do
   it 'returns categories filtered by the category names' do
     categories = @categories.except('red')
     categories.all.should == %w(green blue)
+  end
+
+  context 'when calling many times' do
+    it 'returns categories filtered by the successive category names' do
+      categories = @categories.except('red').except('green')
+      categories.all.should == %w(blue)
+    end
   end
 end
 
