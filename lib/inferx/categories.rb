@@ -1,5 +1,6 @@
 require 'inferx/adapter'
 require 'inferx/category'
+require 'inferx/category/complementary'
 require 'set'
 
 class Inferx
@@ -8,12 +9,15 @@ class Inferx
 
     # @param [Redis] redis an instance of Redis
     # @param [Hash] options
+    # @option options [Boolean] :complementary use complementary Bayes
+    #   classifier
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
     def initialize(redis, options = {})
       super
       @filter = Set.new
       @except = Set.new
+      @category_class = options[:complementary] ? Category::Complementary : Category
     end
 
     # Filter categories.
@@ -47,7 +51,7 @@ class Inferx
       size = hget(category_name)
       raise ArgumentError, "#{category_name.inspect} is missing" unless size
       raise ArgumentError, "#{category_name.inspect} does not exist in filtered categories" unless all_in_visible.include?(category_name)
-      spawn_category(category_name, size.to_i)
+      spawn(@category_class, category_name, size.to_i)
     end
     alias [] get
 
@@ -89,14 +93,8 @@ class Inferx
 
       hgetall.each do |category_name, size|
         next unless visible_category_names.include?(category_name)
-        yield spawn_category(category_name, size.to_i)
+        yield spawn(@category_class, category_name, size.to_i)
       end
-    end
-
-    protected
-
-    def spawn_category(*args)
-      spawn(Category, *args)
     end
 
     private

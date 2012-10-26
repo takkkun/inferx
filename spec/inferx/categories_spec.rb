@@ -137,6 +137,13 @@ describe Inferx::Categories, '#get' do
       lambda { categories.get('red') }.should raise_error(ArgumentError, '"red" does not exist in filtered categories')
     end
   end
+
+  context 'when construct with :complementary option' do
+    it 'returns an instance of Inferx::Category::Complementary' do
+      categories = described_class.new(@redis, :complementary => true)
+      categories.get('red').should be_an(Inferx::Category::Complementary)
+    end
+  end
 end
 
 describe Inferx::Categories, '#add' do
@@ -274,21 +281,11 @@ describe Inferx::Categories, '#each' do
       category_names.should == %w(green)
     end
   end
-end
 
-describe Inferx::Categories, '#spawn_category' do
-  before do
-    @categories = described_class.new(redis_stub).tap do |s|
-      s.stub!(:spawn => 'category')
+  context 'when construct with :complementary option' do
+    it 'passes an instance of Inferx::Category::Complementary to the block' do
+      categories = described_class.new(@redis, :complementary => true)
+      categories.each { |category| category.should be_an(Inferx::Category::Complementary) }
     end
-  end
-
-  it 'calls #spawn with Inferx::Category and the arguments' do
-    @categories.should_receive(:spawn).with(Inferx::Category, 'arg1', 'arg2')
-    @categories.__send__(:spawn_category, 'arg1', 'arg2')
-  end
-
-  it 'returns the return value from #spawn' do
-    @categories.__send__(:spawn_category, 'arg1', 'arg2').should == 'category'
   end
 end

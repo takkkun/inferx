@@ -1,8 +1,8 @@
 require 'inferx/category'
 
 class Inferx
-  module Complementary
-    class Category < Inferx::Category
+  class Category
+    class Complementary < Category
 
       # Inject the words to the training data of the category.
       #

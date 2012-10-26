@@ -1,6 +1,6 @@
-require 'inferx/complementary/category'
+require 'inferx/category/complementary'
 
-describe Inferx::Complementary::Category, '#ready_to_inject' do
+describe Inferx::Category::Complementary, '#ready_to_inject' do
   it 'calls #inject with the words to inject block' do
     category = described_class.new(redis_stub, 'red', 2)
     category.should_receive(:inject).with(%w(word1 word2 word3))
@@ -13,7 +13,7 @@ describe Inferx::Complementary::Category, '#ready_to_inject' do
   end
 end
 
-describe Inferx::Complementary::Category, '#ready_to_eject' do
+describe Inferx::Category::Complementary, '#ready_to_eject' do
   it 'calls #eject with the words to eject block' do
     category = described_class.new(redis_stub, 'red', 2)
     category.should_receive(:eject).with(%w(word1 word2 word3))
@@ -26,7 +26,7 @@ describe Inferx::Complementary::Category, '#ready_to_eject' do
   end
 end
 
-describe Inferx::Complementary::Category, '#train' do
+describe Inferx::Category::Complementary, '#train' do
   it 'calls Redis#zincrby and Redis#hincrby for other categories' do
     redis = redis_stub do |s|
       s.stub!(:hkeys => %w(red green blue))
@@ -70,7 +70,7 @@ describe Inferx::Complementary::Category, '#train' do
   end
 end
 
-describe Inferx::Complementary::Category, '#untrain' do
+describe Inferx::Category::Complementary, '#untrain' do
   it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby for other categories' do
     redis = redis_stub do |s|
       s.stub!(:hkeys => %w(red green blue))
