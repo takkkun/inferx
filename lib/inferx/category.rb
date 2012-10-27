@@ -19,7 +19,7 @@ class Inferx
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
     def initialize(redis, name, size, categories, options = {})
-      super(redis, options)
+      super redis, options
       @name = name.to_s
       @size = size
       @categories = categories
@@ -73,18 +73,8 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def train(words)
-      return if words.empty?
-
-      increase = words.size
-      words = collect(words)
-
-      @redis.pipelined do
-        words.each { |word, count| zincrby(count, word) }
-        hincrby(name, increase)
-        @redis.save unless manual?
-      end
-
-      @size += increase
+      increases = @categories.filter(name).inject(words)
+      @size += increases[name]
     end
 
     # Prepare to enhance the training data. Use for high performance.
@@ -97,31 +87,8 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def untrain(words)
-      return if words.empty?
-
-      decrease = words.size
-      words = collect(words)
-
-      scores = @redis.pipelined do
-        words.each { |word, count| zincrby(-count, word) }
-        zremrangebyscore('-inf', 0)
-      end
-
-      length = words.size
-
-      scores[0, length].each do |score|
-        score = score.to_i
-        decrease += score if score < 0
-      end
-
-      return unless decrease > 0
-
-      @redis.pipelined do
-        hincrby(name, -decrease)
-        @redis.save unless manual?
-      end
-
-      @size -= decrease
+      decreases = @categories.filter(name).eject(words)
+      @size -= decreases[name]
     end
 
     # Prepare to attenuate the training data giving words.
@@ -139,20 +106,12 @@ class Inferx
       scores.map { |score| score ? score.to_i : nil }
     end
 
-    protected
+    private
 
-    %w(zrevrange zscore zincrby zremrangebyscore).each do |command|
+    %w(zrevrange zscore).each do |command|
       define_method(command) do |*args|
         @category_key ||= make_category_key(@name)
         @redis.__send__(command, @category_key, *args)
-      end
-    end
-
-    def collect(words)
-      words.inject({}) do |hash, word|
-        hash[word] ||= 0
-        hash[word] += 1
-        hash
       end
     end
   end

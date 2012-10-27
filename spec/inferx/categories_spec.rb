@@ -303,3 +303,163 @@ describe Inferx::Categories, '#each' do
     end
   end
 end
+
+describe Inferx::Categories, '#inject' do
+  before do
+    @redis = redis_stub do |s|
+      s.stub!(:hkeys => %w(red green blue))
+      s.stub!(:zincrby)
+      s.stub!(:hincrby)
+    end
+
+    @categories = described_class.new(@redis).filter('red', 'green')
+  end
+
+  it 'calls Redis#zincrby and Redis#hincrby for the categories' do
+    @redis.tap do |s|
+      s.should_receive(:zincrby).with('inferx:categories:red', 2, 'apple')
+      s.should_receive(:zincrby).with('inferx:categories:red', 3, 'strawberry')
+      s.should_receive(:hincrby).with('inferx:categories', 'red', 5)
+
+      s.should_receive(:zincrby).with('inferx:categories:green', 2, 'apple')
+      s.should_receive(:zincrby).with('inferx:categories:green', 3, 'strawberry')
+      s.should_receive(:hincrby).with('inferx:categories', 'green', 5)
+
+      s.should_not_receive(:zincrby).with('inferx:categories:blue', 2, 'apple')
+      s.should_not_receive(:zincrby).with('inferx:categories:blue', 3, 'strawberry')
+      s.should_not_receive(:hincrby).with('inferx:categories', 'blue', 5)
+
+      s.should_receive(:save)
+    end
+
+    @categories.inject(%w(apple strawberry apple strawberry strawberry))
+  end
+
+  it 'returns an instance of Hash' do
+    increases = @categories.inject(%w(apple strawberry apple strawberry strawberry))
+    increases.should be_a(Hash)
+  end
+
+  it 'returns increase for each category' do
+    increases = @categories.inject(%w(apple strawberry apple strawberry strawberry))
+    increases.should == {'red' => 5, 'green' => 5}
+  end
+
+  context 'with empty categories' do
+    it 'returns an empty hash' do
+      categories = @categories.except('red', 'green')
+      increases = categories.inject(%w(apple strawberry apple strawberry strawberry))
+      increases.should be_empty
+    end
+  end
+
+  context 'with empty words' do
+    it 'returns zero fluctuation' do
+      increases = @categories.inject([])
+      increases.should == {'red' => 0, 'green' => 0}
+    end
+  end
+
+  context 'with manual save' do
+    it 'does not call Redis#save' do
+      @redis.tap do |s|
+        s.should_not_receive(:save)
+      end
+
+      categories = described_class.new(@redis, :manual => true)
+      categories.inject(%w(apple strawberry apple strawberry strawberry))
+    end
+  end
+end
+
+describe Inferx::Categories, '#eject' do
+  before do
+    @redis = redis_stub do |s|
+      s.stub!(:hkeys => %w(red green blue))
+
+      s.stub!(:pipelined).and_return do |&block|
+        block.call
+        %w(3 2 0) + %w(3 2 0)
+      end
+
+      s.stub!(:zincrby)
+      s.stub!(:zremrangebyscore)
+      s.stub!(:hincrby)
+    end
+
+    @categories = described_class.new(@redis).filter('red', 'green')
+  end
+
+  it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby for the categories' do
+    @redis.tap do |s|
+      s.should_receive(:zincrby).with('inferx:categories:red', -2, 'apple')
+      s.should_receive(:zincrby).with('inferx:categories:red', -3, 'strawberry')
+      s.should_receive(:zremrangebyscore).with('inferx:categories:red', '-inf', 0)
+      s.should_receive(:hincrby).with('inferx:categories', 'red', -5)
+
+      s.should_receive(:zincrby).with('inferx:categories:green', -2, 'apple')
+      s.should_receive(:zincrby).with('inferx:categories:green', -3, 'strawberry')
+      s.should_receive(:zremrangebyscore).with('inferx:categories:green', '-inf', 0)
+      s.should_receive(:hincrby).with('inferx:categories', 'green', -5)
+
+      s.should_not_receive(:zincrby).with('inferx:categories:blue', 2, 'apple')
+      s.should_not_receive(:zincrby).with('inferx:categories:blue', 3, 'strawberry')
+      s.should_not_receive(:zremrangebyscore).with('inferx:categories:blue', '-inf', 0)
+      s.should_not_receive(:hincrby).with('inferx:categories', 'blue', 5)
+
+      s.should_receive(:save)
+    end
+
+    @categories.eject(%w(apple strawberry apple strawberry strawberry))
+  end
+
+  it 'returns an instance of Hash' do
+    decreases = @categories.eject(%w(apple strawberry apple strawberry strawberry))
+    decreases.should be_a(Hash)
+  end
+
+  it 'returns decrease for each category' do
+    decreases = @categories.eject(%w(apple strawberry apple strawberry strawberry))
+    decreases.should == {'red' => 5, 'green' => 5}
+  end
+
+  it 'adjusts decrease' do
+    @redis.tap do |s|
+      s.stub!(:pipelined).and_return do |&block|
+        block.call
+        %w(3 2 0) + %w(-1 -2 2)
+      end
+
+      s.should_receive(:hincrby).with('inferx:categories', 'green', -2)
+    end
+
+    decreases = @categories.eject(%w(apple strawberry apple strawberry strawberry))
+    decreases.should == {'red' => 5, 'green' => 2}
+  end
+
+  context 'with empty categories' do
+    it 'returns an empty hash' do
+      categories = @categories.except('red', 'green')
+      decreases = categories.eject(%w(apple strawberry apple strawberry strawberry))
+      decreases.should be_empty
+    end
+  end
+
+  context 'with empty words' do
+    it 'returns zero fluctuation' do
+      decreases = @categories.eject([])
+      decreases.should == {'red' => 0, 'green' => 0}
+    end
+  end
+
+  context 'with manual save' do
+    it 'does not call Redis#save' do
+      @redis.tap do |s|
+        s.should_not_receive(:save)
+      end
+
+      categories = described_class.new(@redis, :manual => true)
+      categories.eject(%w(apple strawberry apple strawberry strawberry))
+    end
+  end
+end

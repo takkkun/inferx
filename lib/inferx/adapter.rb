@@ -52,13 +52,5 @@ class Inferx
     def spawn(klass, *args)
       klass.new(@redis, *args, @options)
     end
-
-    protected
-
-    %w(hdel hget hgetall hincrby hkeys hsetnx).each do |command|
-      define_method(command) do |*args|
-        @redis.__send__(command, categories_key, *args)
-      end
-    end
   end
 end

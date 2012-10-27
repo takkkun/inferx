@@ -105,6 +105,72 @@ class Inferx
       end
     end
 
+    # Inject the words to the training data of the categories.
+    #
+    # @param [Array<String>] words an array of words
+    # @return [Hash<String, Integer>] increase for each category
+    def inject(words)
+      category_names = all
+      return {} if category_names.empty?
+      return associate(category_names, 0) if words.empty?
+
+      increase = words.size
+      words = collect(words)
+
+      associate(category_names, increase) do
+        @redis.pipelined do
+          category_names.each do |category_name|
+            words.each { |word, count| zincrby(category_name, count, word) }
+            hincrby(category_name, increase)
+          end
+
+          @redis.save unless manual?
+        end
+      end
+    end
+
+    # Eject the words from the training data of the categories.
+    #
+    # @param [Array<String>] words an array of words
+    # @return [Hash<String, Integer>] decrease for each category
+    def eject(words)
+      category_names = all
+      return {} if category_names.empty?
+      return associate(category_names, 0) if words.empty?
+
+      decrease = words.size
+      words = collect(words)
+
+      associate(category_names, decrease) do |fluctuation|
+        all_scores = @redis.pipelined do
+          category_names.each do |category_name|
+            words.each { |word, count| zincrby(category_name, -count, word) }
+            zremrangebyscore(category_name, '-inf', 0)
+          end
+        end
+
+        length = words.size
+
+        category_names.each_with_index do |category_name, index|
+          scores = all_scores[index * (length + 1), length]
+          initial = fluctuation[category_name]
+
+          fluctuation[category_name] = scores.inject(initial) do |decrease, score|
+            score = score.to_i
+            score < 0 ? decrease + score : decrease
+          end
+        end
+
+        @redis.pipelined do
+          fluctuation.each do |category_name, decrease|
+            hincrby(category_name, -decrease)
+          end
+
+          @redis.save unless manual?
+        end
+      end
+    end
+
     private
 
     def filtered(&block)
@@ -115,6 +181,33 @@ class Inferx
       all = Set.new(hkeys || [])
       all &= @filter if @filter
       all - @except
+    end
+
+    def collect(words)
+      words.inject({}) do |hash, word|
+        hash[word] ||= 0
+        hash[word] += 1
+        hash
+      end
+    end
+
+    def associate(keys, value, &block)
+      keys_and_values = Hash[keys.map { |key| [key, value] }]
+      yield *(block.arity.zero? ? [] : [keys_and_values]) if block_given?
+      keys_and_values
+    end
+
+    %w(hdel hget hgetall hincrby hkeys hsetnx).each do |command|
+      define_method(command) do |*args|
+        @redis.__send__(command, categories_key, *args)
+      end
+    end
+
+    %w(zincrby zremrangebyscore).each do |command|
+      define_method(command) do |category_name, *args|
+        category_key = make_category_key(category_name)
+        @redis.__send__(command, category_key, *args)
+      end
     end
   end
 end

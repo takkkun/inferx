@@ -84,52 +84,31 @@ describe Inferx::Category, '#get' do
 end
 
 describe Inferx::Category, '#train' do
-  it 'calls Redis#zincrby and Redis#hincrby' do
-    redis = redis_stub do |s|
-      s.should_receive(:zincrby).with('inferx:categories:red', 2, 'apple')
-      s.should_receive(:zincrby).with('inferx:categories:red', 3, 'strawberry')
-      s.should_receive(:hincrby).with('inferx:categories', 'red', 5)
-      s.should_receive(:save)
+  before do
+    @filtered_categories = categories_stub do |s|
+      s.stub!(:inject => {'red' => 5})
     end
 
-    category = described_class.new(redis, 'red', 2, categories_stub)
-    category.train(%w(apple strawberry apple strawberry strawberry))
+    @categories = categories_stub do |s|
+      s.stub!(:filter => @filtered_categories)
+    end
+
+    @category = described_class.new(redis_stub, 'red', 2, @categories)
   end
 
-  it 'increases the size attribute' do
-    redis = redis_stub do |s|
-      s.stub!(:zincrby)
-      s.stub!(:hincrby)
-    end
-
-    category = described_class.new(redis, 'red', 2, categories_stub)
-    category.train(%w(apple strawberry apple strawberry strawberry))
-    category.size.should == 7
+  it 'calls Inferx::Categories#filter with the category name' do
+    @categories.should_receive(:filter).with('red').and_return(@filtered_categories)
+    @category.train(%w(apple strawberry apple strawberry strawberry))
   end
 
-  context 'with no update' do
-    it 'does not call Redis#hincrby' do
-      redis = redis_stub do |s|
-        s.should_not_receive(:hincrby)
-        s.should_not_receive(:save)
-      end
-
-      category = described_class.new(redis, 'red', 2, categories_stub)
-      category.train([])
-    end
+  it 'calls Inferx::Categories#inject with the words' do
+    @filtered_categories.should_receive(:inject).with(%w(apple strawberry apple strawberry strawberry)).and_return('red' => 5)
+    @category.train(%w(apple strawberry apple strawberry strawberry))
   end
 
-  context 'with manual save' do
-    it 'does not call Redis#save' do
-      redis = redis_stub do |s|
-        s.stub!(:zincrby)
-        s.stub!(:hincrby)
-        s.should_not_receive(:save)
-      end
-
-      category = described_class.new(redis, 'red', 2, categories_stub, :manual => true)
-      category.train(%w(apple strawberry apple strawberry strawberry))
-    end
+  it 'increases size attribute' do
+    @category.train(%w(apple strawberry apple strawberry strawberry))
+    @category.size.should == 7
   end
 end
 
@@ -147,77 +126,31 @@ describe Inferx::Category, '#ready_to_train' do
 end
 
 describe Inferx::Category, '#untrain' do
-  it 'calls Redis#zincrby, Redis#zremrangebyscore and Redis#hincrby' do
-    redis = redis_stub do |s|
-      s.stub!(:pipelined).and_return do |&block|
-        block.call
-        %w(3 -2 1)
-      end
-
-      s.should_receive(:zincrby).with('inferx:categories:red', -2, 'apple')
-      s.should_receive(:zincrby).with('inferx:categories:red', -3, 'strawberry')
-      s.should_receive(:zremrangebyscore).with('inferx:categories:red', '-inf', 0)
-      s.should_receive(:hincrby).with('inferx:categories', 'red', -3)
-      s.should_receive(:save)
+  before do
+    @filtered_categories = categories_stub do |s|
+      s.stub!(:eject => {'red' => 5})
     end
 
-    category = described_class.new(redis, 'red', 7, categories_stub)
-    category.untrain(%w(apple strawberry apple strawberry strawberry))
+    @categories = categories_stub do |s|
+      s.stub!(:filter => @filtered_categories)
+    end
+
+    @category = described_class.new(redis_stub, 'red', 7, @categories)
   end
 
-  it 'decreases the size attribute' do
-    redis = redis_stub do |s|
-      s.stub!(:pipelined).and_return do |&block|
-        block.call
-        %w(3 -2 1)
-      end
-
-      s.stub!(:zincrby)
-      s.stub!(:zremrangebyscore)
-      s.stub!(:hincrby)
-    end
-
-    category = described_class.new(redis, 'red', 7, categories_stub)
-    category.untrain(%w(apple strawberry apple strawberry strawberry))
-    category.size.should == 4
+  it 'calls Inferx::Categories#filter with the category name' do
+    @categories.should_receive(:filter).with('red').and_return(@filtered_categories)
+    @category.untrain(%w(apple strawberry apple strawberry strawberry))
   end
 
-  context 'with no update' do
-    it 'does not call Redis#zremrangebyscore and Redis#hincrby' do
-      redis = redis_stub do |s|
-        s.stub!(:pipelined).and_return do |&block|
-          block.call
-          %w(-2 -3 2)
-        end
-
-        s.stub!(:zincrby)
-        s.stub!(:zremrangebyscore)
-        s.should_not_receive(:hincrby)
-        s.should_not_receive(:save)
-      end
-
-      category = described_class.new(redis, 'red', 7, categories_stub)
-      category.untrain(%w(apple strawberry apple strawberry strawberry))
-    end
+  it 'calls Inferx::Categories#eject with the words' do
+    @filtered_categories.should_receive(:eject).with(%w(apple strawberry apple strawberry strawberry)).and_return('red' => 5)
+    @category.untrain(%w(apple strawberry apple strawberry strawberry))
   end
 
-  context 'with manual save' do
-    it 'does not call Redis#save' do
-      redis = redis_stub do |s|
-        s.stub!(:pipelined).and_return do |&block|
-          block.call
-          %w(3 -2 1)
-        end
-
-        s.stub!(:zincrby)
-        s.stub!(:zremrangebyscore)
-        s.stub!(:hincrby)
-        s.should_not_receive(:save)
-      end
-
-      category = described_class.new(redis, 'red', 7, categories_stub, :manual => true)
-      category.untrain(%w(apple strawberry apple strawberry strawberry))
-    end
+  it 'decreases size attribute' do
+    @category.untrain(%w(apple strawberry apple strawberry strawberry))
+    @category.size.should == 2
   end
 end
 

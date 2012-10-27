@@ -8,5 +8,7 @@ def redis_stub
 end
 
 def categories_stub
-  stub
+  stub.tap do |s|
+    yield s if block_given?
+  end
 end
