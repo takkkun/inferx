@@ -204,7 +204,7 @@ class Inferx
     end
 
     def spawn(*args)
-      @category_class.new(@redis, *args, self)
+      @category_class.new(@redis, self, *args)
     end
 
     def collect(words)

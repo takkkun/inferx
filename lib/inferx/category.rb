@@ -10,15 +10,15 @@ class Inferx
     end
 
     # @param [Redis] redis an instance of Redis
+    # @param [Inferx::Categories] categories the categories
     # @param [String] name a category name
     # @param [Integer] size total of scores
-    # @param [Inferx::Categories] categories the categories
-    def initialize(redis, name, size, categories)
+    def initialize(redis, categories, name, size)
       @redis = redis
-      @name = name.to_s
-      @size = size
       @categories = categories
       @key = "#{categories.key}:#{name}"
+      @name = name.to_s
+      @size = size
     end
 
     # Get a category name.

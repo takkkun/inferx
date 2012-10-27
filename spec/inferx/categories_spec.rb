@@ -150,7 +150,7 @@ describe Inferx::Categories, '#get' do
 
   it 'calles Inferx::Category.new with the instance of Redis and the category name' do
     categories = described_class.new(@redis)
-    Inferx::Category.should_receive(:new).with(@redis, 'red', 2, categories)
+    Inferx::Category.should_receive(:new).with(@redis, categories, 'red', 2)
     categories.get('red')
   end
 

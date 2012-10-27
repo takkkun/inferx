@@ -3,7 +3,7 @@ require 'inferx/category/complementary'
 
 describe Inferx::Category::Complementary, '#ready_to_inject' do
   it 'calls #inject with the words to inject block' do
-    category = described_class.new(redis_stub, 'red', 2, categories_stub)
+    category = described_class.new(redis_stub, categories_stub, 'red', 2)
     category.should_receive(:inject).with(%w(word1 word2 word3))
 
     category.ready_to_inject do |inject|
@@ -16,7 +16,7 @@ end
 
 describe Inferx::Category::Complementary, '#ready_to_eject' do
   it 'calls #eject with the words to eject block' do
-    category = described_class.new(redis_stub, 'red', 2, categories_stub)
+    category = described_class.new(redis_stub, categories_stub, 'red', 2)
     category.should_receive(:eject).with(%w(word1 word2 word3))
 
     category.ready_to_eject do |eject|
@@ -37,7 +37,7 @@ describe Inferx::Category::Complementary, '#train' do
       s.stub!(:except => @filtered_categories)
     end
 
-    @category = described_class.new(redis_stub, 'red', 2, @categories)
+    @category = described_class.new(redis_stub, @categories, 'red', 2)
   end
 
   it 'calls Inferx::Categories#except with the category name' do
@@ -61,7 +61,7 @@ describe Inferx::Category::Complementary, '#untrain' do
       s.stub!(:except => @filtered_categories)
     end
 
-    @category = described_class.new(redis_stub, 'red', 7, @categories)
+    @category = described_class.new(redis_stub, @categories, 'red', 7)
   end
 
   it 'calls Inferx::Categories#except with the category name' do
