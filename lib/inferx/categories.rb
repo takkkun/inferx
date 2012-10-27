@@ -75,7 +75,7 @@ class Inferx
       size = hget(category_name)
       raise ArgumentError, "#{category_name.inspect} is missing" unless size
       raise ArgumentError, "#{category_name.inspect} does not exist in filtered categories" unless all_in_visible.include?(category_name.to_s)
-      spawn(category_name, size.to_i)
+      make_category(category_name, size.to_i)
     end
     alias [] get
 
@@ -117,7 +117,7 @@ class Inferx
 
       hgetall.each do |category_name, size|
         next unless visible_category_names.include?(category_name)
-        yield spawn(category_name, size.to_i)
+        yield make_category(category_name, size.to_i)
       end
     end
 
@@ -203,7 +203,7 @@ class Inferx
       "#{@key}:#{category_name}"
     end
 
-    def spawn(*args)
+    def make_category(*args)
       @category_class.new(@redis, self, *args)
     end
 
