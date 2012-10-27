@@ -2,14 +2,6 @@ require 'spec_helper'
 require 'inferx/category'
 
 describe Inferx::Category, '#initialize' do
-  it 'calls Inferx::Adapter#initialize' do
-    redis = redis_stub
-    category = described_class.new(redis, 'red', 2, categories_stub, :namespace => 'example', :manual => true)
-    category.instance_eval { @redis }.should == redis
-    category.instance_eval { @namespace }.should == 'example'
-    category.should be_manual
-  end
-
   it 'sets the category name to the name attribute' do
     category = described_class.new(redis_stub, 'red', 2, categories_stub)
     category.name.should == 'red'

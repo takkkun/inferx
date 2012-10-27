@@ -1,10 +1,9 @@
-require 'inferx/adapter'
 require 'inferx/category'
 require 'inferx/category/complementary'
 require 'set'
 
 class Inferx
-  class Categories < Adapter
+  class Categories
     include Enumerable
 
     # @param [Redis] redis an instance of Redis
@@ -14,10 +13,27 @@ class Inferx
     # @option options [String] :namespace namespace of keys to be used to Redis
     # @option options [Boolean] :manual whether manual save, defaults to false
     def initialize(redis, options = {})
-      super
+      @redis = redis
+      @category_class = options[:complementary] ? Category::Complementary : Category
+      parts = %w(inferx categories)
+      parts.insert(1, options[:namespace]) if options[:namespace]
+      @key = parts.join(':')
+      @manual = !!options[:manual]
       @filter = nil
       @except = Set.new
-      @category_class = options[:complementary] ? Category::Complementary : Category
+    end
+
+    # Get key for access to the categories on Redis.
+    #
+    # @attribute [r] key
+    # @return [String] the key
+    attr_reader :key
+
+    # Determine if manual save.
+    #
+    # @return [Boolean] whether manual save
+    def manual?
+      @manual
     end
 
     # Filter categories.
@@ -59,7 +75,7 @@ class Inferx
       size = hget(category_name)
       raise ArgumentError, "#{category_name.inspect} is missing" unless size
       raise ArgumentError, "#{category_name.inspect} does not exist in filtered categories" unless all_in_visible.include?(category_name.to_s)
-      spawn(@category_class, category_name, size.to_i, self)
+      spawn(category_name, size.to_i)
     end
     alias [] get
 
@@ -101,7 +117,7 @@ class Inferx
 
       hgetall.each do |category_name, size|
         next unless visible_category_names.include?(category_name)
-        yield spawn(@category_class, category_name, size.to_i, self)
+        yield spawn(category_name, size.to_i)
       end
     end
 
@@ -183,6 +199,14 @@ class Inferx
       all - @except
     end
 
+    def make_category_key(category_name)
+      "#{@key}:#{category_name}"
+    end
+
+    def spawn(*args)
+      @category_class.new(@redis, *args, self)
+    end
+
     def collect(words)
       words.inject({}) do |hash, word|
         hash[word] ||= 0
@@ -199,14 +223,14 @@ class Inferx
 
     %w(hdel hget hgetall hincrby hkeys hsetnx).each do |command|
       define_method(command) do |*args|
-        @redis.__send__(command, categories_key, *args)
+        @redis.__send__(command, @key, *args)
       end
     end
 
     %w(zincrby zremrangebyscore).each do |command|
       define_method(command) do |category_name, *args|
-        category_key = make_category_key(category_name)
-        @redis.__send__(command, category_key, *args)
+        key = make_category_key(category_name)
+        @redis.__send__(command, key, *args)
       end
     end
   end

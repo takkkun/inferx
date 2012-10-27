@@ -8,12 +8,35 @@ describe Inferx::Categories do
 end
 
 describe Inferx::Categories, '#initialize' do
-  it 'calls Inferx::Adapter#initialize' do
-    redis = redis_stub
-    categories = described_class.new(redis, :namespace => 'example', :manual => true)
-    categories.instance_eval { @redis }.should == redis
-    categories.instance_eval { @namespace }.should == 'example'
-    categories.should be_manual
+  before do
+    @categories = described_class.new(redis_stub)
+  end
+
+  it 'sets "inferx:categories" to key attribute by default' do
+    @categories.key.should == 'inferx:categories'
+  end
+
+  it 'is not manual save by default' do
+    @categories.should_not be_manual
+  end
+
+  context 'with :namespace option' do
+    it 'considers the value to key attribute' do
+      categories = described_class.new(redis_stub, :namespace => 'example')
+      categories.key.should == 'inferx:example:categories'
+    end
+  end
+
+  context 'with :manual option' do
+    it 'is manual save if the value is true' do
+      categories = described_class.new(redis_stub, :manual => true)
+      categories.should be_manual
+    end
+
+    it 'is not manual save if the value is false' do
+      categories = described_class.new(redis_stub, :manual => false)
+      categories.should_not be_manual
+    end
   end
 end
 
@@ -125,9 +148,9 @@ describe Inferx::Categories, '#get' do
     categories.get('red')
   end
 
-  it 'calles Inferx::Category.new with the instance of Redis, the category name and the options' do
-    categories = described_class.new(@redis, :namespace => 'example', :manual => true)
-    Inferx::Category.should_receive(:new).with(@redis, 'red', 2, categories, :namespace => 'example', :manual => true)
+  it 'calles Inferx::Category.new with the instance of Redis and the category name' do
+    categories = described_class.new(@redis)
+    Inferx::Category.should_receive(:new).with(@redis, 'red', 2, categories)
     categories.get('red')
   end
 

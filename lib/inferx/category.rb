@@ -1,7 +1,5 @@
-require 'inferx/adapter'
-
 class Inferx
-  class Category < Adapter
+  class Category
 
     def self.ready_for(method_name)
       define_method("ready_to_#{method_name}") do |&block|
@@ -15,26 +13,25 @@ class Inferx
     # @param [String] name a category name
     # @param [Integer] size total of scores
     # @param [Inferx::Categories] categories the categories
-    # @param [Hash] options
-    # @option options [String] :namespace namespace of keys to be used to Redis
-    # @option options [Boolean] :manual whether manual save, defaults to false
-    def initialize(redis, name, size, categories, options = {})
-      super redis, options
+    def initialize(redis, name, size, categories)
+      @redis = redis
       @name = name.to_s
       @size = size
       @categories = categories
+      @key = "#{categories.key}:#{name}"
     end
 
     # Get a category name.
     #
     # @attribute [r] name
     # @return [String] a category name
+    attr_reader :name
 
     # Get total of scores.
     #
     # @attribute [r] size
     # @return [Integer] total of scores
-    attr_reader :name, :size
+    attr_reader :size
 
     # Get words with scores in the category.
     #
@@ -110,8 +107,7 @@ class Inferx
 
     %w(zrevrange zscore).each do |command|
       define_method(command) do |*args|
-        @category_key ||= make_category_key(@name)
-        @redis.__send__(command, @category_key, *args)
+        @redis.__send__(command, @key, *args)
       end
     end
   end

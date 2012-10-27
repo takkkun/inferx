@@ -9,6 +9,7 @@ end
 
 def categories_stub
   stub.tap do |s|
+    s.stub!(:key => 'inferx:categories')
     yield s if block_given?
   end
 end
