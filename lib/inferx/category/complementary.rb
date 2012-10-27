@@ -34,14 +34,14 @@ class Inferx
       #
       # @param [Array<String>] words an array of words
       def train(words)
-        @categories.except(name).inject(words)
+        @categories.except(@name).inject(words)
       end
 
       # Attenuate the training data of other categories giving words.
       #
       # @param [Array<String>] words an array of words
       def untrain(words)
-        @categories.except(name).eject(words)
+        @categories.except(@name).eject(words)
       end
     end
   end

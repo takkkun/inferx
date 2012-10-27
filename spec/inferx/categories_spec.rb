@@ -148,7 +148,7 @@ describe Inferx::Categories, '#get' do
     categories.get('red')
   end
 
-  it 'calles Inferx::Category.new with the instance of Redis and the category name' do
+  it 'calles Inferx::Category.new with the instance of Redis, the categories, the category name and total of scores' do
     categories = described_class.new(@redis)
     Inferx::Category.should_receive(:new).with(@redis, categories, 'red', 2)
     categories.get('red')

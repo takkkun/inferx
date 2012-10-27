@@ -21,16 +21,16 @@ class Inferx
       @size = size
     end
 
-    # Get key for access to training data of the category.
+    # Get key for access to training data of the category on Redis.
     #
     # @attribute [r] key
     # @return [String] the key
     attr_reader :key
 
-    # Get a category name.
+    # Get name of the category.
     #
     # @attribute [r] name
-    # @return [String] a category name
+    # @return [String] the name
     attr_reader :name
 
     # Get total of scores.
@@ -43,7 +43,7 @@ class Inferx
     #
     # @return [Hash<String, Integer>] words with scores
     def all
-      words_with_scores = zrevrange(0, -1, :withscores => true)
+      words_with_scores = @redis.zrevrange(@key, 0, -1, :withscores => true)
 
       if !words_with_scores.empty? and words_with_scores.first.is_a?(Array)
         words_with_scores.each { |pair| pair[1] = pair[1].to_i }
@@ -61,13 +61,13 @@ class Inferx
       end
     end
 
-    # Get score of a word.
+    # Get score of the word.
     #
-    # @param [String] word a word
+    # @param [String] word the word
     # @return [Integer] when the word is member, score of the word
     # @return [nil] when the word is not member
     def get(word)
-      score = zscore(word)
+      score = @redis.zscore(@key, word)
       score ? score.to_i : nil
     end
     alias [] get
@@ -76,8 +76,8 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def train(words)
-      increases = @categories.filter(name).inject(words)
-      @size += increases[name]
+      increases = @categories.filter(@name).inject(words)
+      @size += increases[@name]
     end
 
     # Prepare to enhance the training data. Use for high performance.
@@ -90,8 +90,8 @@ class Inferx
     #
     # @param [Array<String>] words an array of words
     def untrain(words)
-      decreases = @categories.filter(name).eject(words)
-      @size -= decreases[name]
+      decreases = @categories.filter(@name).eject(words)
+      @size -= decreases[@name]
     end
 
     # Prepare to attenuate the training data giving words.
@@ -105,16 +105,11 @@ class Inferx
     # @param [Array<String>] words an array of words
     # @return [Array<Integer>] scores for each word
     def scores(words)
-      scores = @redis.pipelined { words.map(&method(:zscore)) }
-      scores.map { |score| score ? score.to_i : nil }
-    end
-
-    private
-
-    %w(zrevrange zscore).each do |command|
-      define_method(command) do |*args|
-        @redis.__send__(command, @key, *args)
+      scores = @redis.pipelined do
+        words.map { |word| @redis.zscore(@key, word) }
       end
+
+      scores.map { |score| score ? score.to_i : nil }
     end
   end
 end

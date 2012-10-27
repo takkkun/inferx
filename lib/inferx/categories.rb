@@ -23,7 +23,7 @@ class Inferx
       @except = Set.new
     end
 
-    # Get key for access to the categories on Redis.
+    # Get key for access to categories on Redis.
     #
     # @attribute [r] key
     # @return [String] the key
@@ -67,12 +67,12 @@ class Inferx
       all_in_visible.to_a
     end
 
-    # Get a category according the name.
+    # Get category according the name.
     #
-    # @param [String] category_name a category name
+    # @param [String] category_name the category name
     # @return [Inferx::Category] the category
     def get(category_name)
-      size = hget(category_name)
+      size = @redis.hget(@key, category_name)
       raise ArgumentError, "#{category_name.inspect} is missing" unless size
       raise ArgumentError, "#{category_name.inspect} does not exist in filtered categories" unless all_in_visible.include?(category_name.to_s)
       make_category(category_name, size.to_i)
@@ -84,7 +84,7 @@ class Inferx
     # @param [Array<String>] category_names category names
     def add(*category_names)
       @redis.pipelined do
-        category_names.each { |category_name| hsetnx(category_name, 0) }
+        category_names.each { |category_name| @redis.hsetnx(@key, category_name, 0) }
         @redis.save unless manual?
       end
     end
@@ -94,7 +94,7 @@ class Inferx
     # @param [Array<String>] category_names category names
     def remove(*category_names)
       @redis.pipelined do
-        category_names.each { |category_name| hdel(category_name) }
+        category_names.each { |category_name| @redis.hdel(@key, category_name) }
         @redis.del(*category_names.map(&method(:make_category_key)))
         @redis.save unless manual?
       end
@@ -102,7 +102,7 @@ class Inferx
 
     # Determine if the category is defined.
     #
-    # @param [String] category_name a category name
+    # @param [String] category_name the category name
     # @return whether the category is defined
     def exists?(category_name)
       all_in_visible.include?(category_name.to_s)
@@ -110,12 +110,12 @@ class Inferx
 
     # Apply process for each category.
     #
-    # @yield a block to be called for every category
+    # @yield called for every category
     # @yieldparam [Inferx::Category] category a category
     def each
       visible_category_names = all_in_visible
 
-      hgetall.each do |category_name, size|
+      @redis.hgetall(@key).each do |category_name, size|
         next unless visible_category_names.include?(category_name)
         yield make_category(category_name, size.to_i)
       end
@@ -136,8 +136,9 @@ class Inferx
       associate(category_names, increase) do
         @redis.pipelined do
           category_names.each do |category_name|
-            words.each { |word, count| zincrby(category_name, count, word) }
-            hincrby(category_name, increase)
+            category_key = make_category_key(category_name)
+            words.each { |word, count| @redis.zincrby(category_key, count, word) }
+            @redis.hincrby(@key, category_name, increase)
           end
 
           @redis.save unless manual?
@@ -160,8 +161,9 @@ class Inferx
       associate(category_names, decrease) do |fluctuation|
         all_scores = @redis.pipelined do
           category_names.each do |category_name|
-            words.each { |word, count| zincrby(category_name, -count, word) }
-            zremrangebyscore(category_name, '-inf', 0)
+            category_key = make_category_key(category_name)
+            words.each { |word, count| @redis.zincrby(category_key, -count, word) }
+            @redis.zremrangebyscore(category_key, '-inf', 0)
           end
         end
 
@@ -179,7 +181,7 @@ class Inferx
 
         @redis.pipelined do
           fluctuation.each do |category_name, decrease|
-            hincrby(category_name, -decrease)
+            @redis.hincrby(@key, category_name, -decrease)
           end
 
           @redis.save unless manual?
@@ -194,7 +196,7 @@ class Inferx
     end
 
     def all_in_visible
-      all = Set.new(hkeys || [])
+      all = Set.new(@redis.hkeys(@key) || [])
       all &= @filter if @filter
       all - @except
     end
@@ -219,19 +221,6 @@ class Inferx
       keys_and_values = Hash[keys.map { |key| [key, value] }]
       yield *(block.arity.zero? ? [] : [keys_and_values]) if block_given?
       keys_and_values
-    end
-
-    %w(hdel hget hgetall hincrby hkeys hsetnx).each do |command|
-      define_method(command) do |*args|
-        @redis.__send__(command, @key, *args)
-      end
-    end
-
-    %w(zincrby zremrangebyscore).each do |command|
-      define_method(command) do |category_name, *args|
-        key = make_category_key(category_name)
-        @redis.__send__(command, key, *args)
-      end
     end
   end
 end

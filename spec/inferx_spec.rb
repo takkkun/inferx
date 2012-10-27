@@ -18,7 +18,7 @@ describe Inferx, '#initialize' do
     described_class.new(:namespace => 'example', :manual => true)
   end
 
-  it "sets an instance of #{described_class}::Categories to the categories attribute" do
+  it "sets an instance of #{described_class}::Categories to categories attribute" do
     redis_stub
     inferx = described_class.new
     inferx.categories.should be_an(Inferx::Categories)
