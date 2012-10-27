@@ -21,6 +21,12 @@ class Inferx
       @size = size
     end
 
+    # Get key for access to training data of the category.
+    #
+    # @attribute [r] key
+    # @return [String] the key
+    attr_reader :key
+
     # Get a category name.
     #
     # @attribute [r] name

@@ -2,12 +2,17 @@ require 'spec_helper'
 require 'inferx/category'
 
 describe Inferx::Category, '#initialize' do
-  it 'sets the category name to the name attribute' do
+  it 'sets key for access to training data of the category to key attribute' do
+    category = described_class.new(redis_stub, categories_stub, 'red', 2)
+    category.key.should == 'inferx:categories:red'
+  end
+
+  it 'sets the category name to name attribute' do
     category = described_class.new(redis_stub, categories_stub, 'red', 2)
     category.name.should == 'red'
   end
 
-  it 'sets the size to the size attribute' do
+  it 'sets the size to size attribute' do
     category = described_class.new(redis_stub, categories_stub, 'red', 2)
     category.size.should == 2
   end
